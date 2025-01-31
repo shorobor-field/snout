@@ -8,14 +8,24 @@ jobs:
   update:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          ref: main  # or master, depending on your default branch
       
-      - uses: actions/setup-node@v2
+      - uses: actions/setup-node@v4
         with:
           node-version: '18'
+          cache: 'npm'
+      
+      - name: Debug file structure
+        run: |
+          pwd
+          ls -la
+          ls -la src/
       
       - name: Install deps
-        run: npm install  # changed this from npm ci
+        run: npm ci
       
       - name: Install Playwright
         run: npx playwright install chromium --with-deps
