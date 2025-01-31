@@ -13,7 +13,7 @@ async function scrapePinterestBoard(boardId) {
   try {
     // fixed the syntax error here
     const context = await browser.newContext(
-      existsSync()'auth.json') 
+      fs.existsSync('auth.json') 
         ? { storageState: 'auth.json' }
         : {}
     );
@@ -21,7 +21,7 @@ async function scrapePinterestBoard(boardId) {
     const page = await context.newPage();
 
     // only login if we need to
-    if (!existsSync('auth.json')) {  // <-- fixed here too
+    if (!fs.existsSync('auth.json')) {  // <-- fixed here too
       console.log('🔑 first time login...');
       await page.goto('https://pinterest.com/login');
       await page.fill('#email', PINTEREST_EMAIL);
