@@ -1,6 +1,7 @@
 // src/scraper.js
 import { chromium } from 'playwright';
 import fs from 'fs/promises';
+import { existsSync } from 'fs';
 import path from 'path';
 import config from '../config.json' assert { type: 'json' };
 
@@ -13,7 +14,7 @@ async function scrapePinterestBoard(boardId) {
   try {
     // reuse auth if exists
     const context = await browser.newContext(
-      fs.existsSync('auth.json') 
+      existsSync()'auth.json') 
         ? { storageState: 'auth.json' }
         : {}
     );
@@ -21,7 +22,7 @@ async function scrapePinterestBoard(boardId) {
     const page = await context.newPage();
 
     // only login if we need to
-    if (!fs.existsSync('auth.json')) {
+    if (!existsSync()'auth.json')) {
       console.log('🔑 first time login...');
       await page.goto('https://pinterest.com/login');
       await page.fill('#email', PINTEREST_EMAIL);
