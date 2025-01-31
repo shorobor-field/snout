@@ -1,4 +1,3 @@
-// src/scraper.js
 import { chromium } from 'playwright';
 import fs from 'fs/promises';
 import { existsSync } from 'fs';
@@ -14,7 +13,7 @@ async function scrapePinterestBoard(boardId) {
   try {
     // reuse auth if exists
     const context = await browser.newContext(
-      existsSync()'auth.json') 
+      existsSync('auth.json')  // <-- fixed syntax
         ? { storageState: 'auth.json' }
         : {}
     );
@@ -22,7 +21,7 @@ async function scrapePinterestBoard(boardId) {
     const page = await context.newPage();
 
     // only login if we need to
-    if (!existsSync()'auth.json')) {
+    if (!existsSync('auth.json')) {  // <-- fixed here too
       console.log('🔑 first time login...');
       await page.goto('https://pinterest.com/login');
       await page.fill('#email', PINTEREST_EMAIL);
@@ -37,7 +36,6 @@ async function scrapePinterestBoard(boardId) {
     console.log(`🎯 scraping board ${boardId}...`);
     await page.goto(`https://pinterest.com/?boardId=${boardId}`);
     
-    // same scraping logic as before
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     await page.waitForTimeout(2000);
 
@@ -73,7 +71,6 @@ async function scrapeAllBoards() {
   for (const feed of config.feeds) {
     const pins = await scrapePinterestBoard(feed.boardId);
     
-    // save to data/[id].json
     await fs.writeFile(
       `./data/${feed.id}.json`,
       JSON.stringify(pins, null, 2)
