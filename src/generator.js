@@ -91,7 +91,6 @@ async function generateAllFeeds() {
     await generateFeed(feed);
   }
   
-  // generate index page
   const indexHtml = `
 <!DOCTYPE html>
 <html lang="en">
@@ -106,28 +105,161 @@ async function generateAllFeeds() {
             margin: 2rem auto;
             padding: 0 1rem;
             line-height: 1.5;
+            color: #333;
         }
-        .feed-card {
+        .feed-card, .add-feed {
             border: 1px solid #eee;
             padding: 1.5rem;
             margin: 1rem 0;
             border-radius: 8px;
+            background: white;
         }
-        .feed-card h2 {
+        .add-feed {
+            background: #f8f9fa;
+        }
+        h1, h2 {
             margin: 0;
             margin-bottom: 0.5rem;
         }
-        .feed-card p {
+        p {
             margin: 0;
             margin-bottom: 1rem;
             color: #666;
         }
+        input {
+            display: block;
+            width: 100%;
+            padding: 0.75rem;
+            margin-bottom: 1rem;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 1rem;
+        }
+        input:focus {
+            outline: none;
+            border-color: #0066cc;
+            box-shadow: 0 0 0 2px rgba(0,102,204,0.1);
+        }
+        button {
+            width: 100%;
+            padding: 0.75rem;
+            background: #0066cc;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background: #0052a3;
+        }
+        .note {
+            font-size: 0.9rem;
+            color: #666;
+            margin-top: 0.5rem;
+        }
+        .error {
+            color: #dc2626;
+            margin-bottom: 1rem;
+            display: none;
+        }
     </style>
+    <script>
+        function extractBoardId(url) {
+            // Handle both full URLs and just board IDs
+            const match = url.match(/pinterest\.com\\/.*\\/(.+?)(\\/|$)/);
+            return match ? match[1] : url.trim();
+        }
+
+        async function addFeed(event) {
+            event.preventDefault();
+            const form = event.target;
+            const errorDiv = document.getElementById('error-message');
+            errorDiv.style.display = 'none';
+            
+            const boardInput = form.boardId.value;
+            const boardId = extractBoardId(boardInput);
+            
+            if (!boardId) {
+                errorDiv.textContent = 'Please enter a valid Pinterest board URL or ID';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            const feedId = boardId.toLowerCase().replace(/[^a-z0-9]/g, '-');
+            const title = form.title.value || 'Pinterest Board';
+
+            try {
+                const response = await fetch('https://api.github.com/repos/shorobor-field/snout/dispatches', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + form.token.value,
+                        'Accept': 'application/vnd.github.v3+json'
+                    },
+                    body: JSON.stringify({
+                        event_type: 'add-feed',
+                        client_payload: {
+                            feedId,
+                            title,
+                            boardId,
+                            description: form.description.value
+                        }
+                    })
+                });
+
+                if (response.ok) {
+                    alert('Feed added! It will be generated in a few minutes.');
+                    form.reset();
+                } else {
+                    const error = await response.text();
+                    throw new Error(error);
+                }
+            } catch (error) {
+                errorDiv.textContent = 'Error adding feed: ' + error.message;
+                errorDiv.style.display = 'block';
+            }
+        }
+    </script>
 </head>
 <body>
     <h1>🐕 snout</h1>
-    <p>Auto-generated Pinterest RSS feeds: (10 high-quality pins per entry)</p>
+    <p>Auto-generated Pinterest RSS feeds (10 high-quality pins per entry)</p>
     
+    <div class="add-feed">
+        <h2>Add New Feed</h2>
+        <form onsubmit="addFeed(event)">
+            <div id="error-message" class="error"></div>
+            <input 
+              type="text" 
+              name="boardId" 
+              placeholder="Pinterest Board URL or ID" 
+              required
+            >
+            <input 
+              type="text" 
+              name="title" 
+              placeholder="Feed Title (optional)"
+            >
+            <input 
+              type="text" 
+              name="description" 
+              placeholder="Description (optional)"
+            >
+            <input 
+              type="password" 
+              name="token" 
+              placeholder="GitHub Token" 
+              required
+            >
+            <button type="submit">Add Feed</button>
+            <div class="note">
+                Paste a Pinterest board URL or ID and your GitHub token to create a new feed
+            </div>
+        </form>
+    </div>
+
     ${config.feeds.map(feed => `
         <div class="feed-card">
             <h2>${feed.title}</h2>
