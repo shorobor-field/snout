@@ -1,0 +1,33 @@
+name: Update Feeds
+on:
+  schedule:
+    - cron: '0 */6 * * *'  # runs every 6 hours
+  workflow_dispatch: # manual trigger for testing
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      
+      - uses: actions/setup-node@v2
+        with:
+          node-version: '18'
+      
+      - name: Install deps
+        run: npm ci
+      
+      - name: Install Playwright
+        run: npx playwright install chromium --with-deps
+      
+      - name: Generate feeds
+        run: npm start
+        env:
+          PINTEREST_EMAIL: ${{ secrets.PINTEREST_EMAIL }}
+          PINTEREST_PASSWORD: ${{ secrets.PINTEREST_PASSWORD }}
+      
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./public
