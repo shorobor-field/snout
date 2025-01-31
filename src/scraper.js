@@ -8,7 +8,10 @@ const PINTEREST_EMAIL = process.env.PINTEREST_EMAIL;
 const PINTEREST_PASSWORD = process.env.PINTEREST_PASSWORD;
 
 async function scrapePinterestBoard(boardId) {
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({ 
+    headless: true,
+    args: ['--window-size=1920,1080']
+  });
   
   try {
     const context = await browser.newContext({
@@ -25,69 +28,62 @@ async function scrapePinterestBoard(boardId) {
     await page.fill('#email', PINTEREST_EMAIL);
     await page.fill('#password', PINTEREST_PASSWORD);
     await page.click('button[type="submit"]');
-    
-    // Wait for navigation after login
-    await page.waitForTimeout(5000);
+    await page.waitForTimeout(3000);
 
-    console.log(`🎯 navigating to suggestions for board ${boardId}...`);
-    // Use the correct URL format for board suggestions
-    await page.goto(`https://pinterest.com/?boardId=${boardId}`, { timeout: 60000 });
-    await page.waitForTimeout(5000);
+    console.log(`🎯 getting suggestions for board ${boardId}...`);
+    await page.goto(`https://pinterest.com/ideas/${boardId}`, { timeout: 60000 });
+    await page.waitForTimeout(3000);
 
-    // Wait for and scroll to the "More ideas" section
-    const moreIdeasText = await page.getByText('More ideas for this board');
-    await moreIdeasText.scrollIntoViewIfNeeded();
-    await page.waitForTimeout(2000);
-
-    // Scroll a bit more to load suggestions
+    // Scroll a few times to ensure content loads
     for (let i = 0; i < 3; i++) {
-        await page.evaluate(() => {
-            const moreIdeas = document.querySelector('div:has-text("More ideas for this board")');
-            if (moreIdeas) {
-                moreIdeas.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                window.scrollBy(0, 500); // Scroll a bit more to load content below "More ideas"
-            }
-        });
-        await page.waitForTimeout(2000);
+      await page.evaluate(() => {
+        window.scrollBy(0, window.innerHeight);
+      });
+      await page.waitForTimeout(1000);
     }
 
-    // Extract pins specifically from the suggestions section
     const pins = await page.evaluate(() => {
-        // Find the "More ideas" section
-        const moreIdeasText = Array.from(document.querySelectorAll('div'))
-            .find(div => div.textContent.includes('More ideas for this board'));
+      // Get all pins after "More ideas for this board"
+      const allDivs = Array.from(document.querySelectorAll('div'));
+      const moreIdeasDiv = allDivs.find(div => 
+        div.textContent?.includes('More ideas for this board')
+      );
+      
+      if (!moreIdeasDiv) {
+        console.log('Could not find More ideas section');
+        return [];
+      }
+
+      // Get all pins in the grid after "More ideas"
+      const suggestions = Array.from(document.querySelectorAll('[data-grid-item="true"]'))
+        .filter(el => {
+          const rect = el.getBoundingClientRect();
+          return rect.top > moreIdeasDiv.getBoundingClientRect().bottom;
+        });
+
+      return suggestions.map(pin => {
+        const img = pin.querySelector('img');
+        const link = pin.querySelector('a');
+        const titleEl = pin.querySelector('[data-test-id="pin-title"]') || 
+                       pin.querySelector('[title]');
         
-        if (!moreIdeasText) {
-            console.log('Could not find "More ideas" section');
-            return [];
+        // Get the highest quality image URL
+        let imageUrl = img?.src;
+        if (imageUrl) {
+          imageUrl = imageUrl.replace(/\/\d+x\//, '/originals/');
         }
 
-        // Get pins from the next sibling elements (the suggestions)
-        const suggestionsContainer = moreIdeasText.parentElement;
-        const pins = suggestionsContainer.querySelectorAll('[data-test-id="pin"], [data-test-id="pinrep"], .Grid__Item');
-        
-        console.log(`Found ${pins.length} suggestion pins`);
-        
-        return Array.from(pins).map(pin => {
-            const img = pin.querySelector('img');
-            let imageUrl = img?.src;
-            
-            // Try to get higher quality image
-            if (imageUrl) {
-                imageUrl = imageUrl.replace(/\/\d+x\//, '/originals/');
-            }
-            
-            return {
-                id: pin.getAttribute('data-pin-id') || Date.now().toString(),
-                title: pin.querySelector('[data-test-id="pin-title"], .richPinTitle')?.textContent?.trim() || 'Untitled Pin',
-                description: pin.querySelector('[data-test-id="pin-description"], .richPinDescription')?.textContent?.trim() || '',
-                image: imageUrl,
-                url: pin.querySelector('a[href*="/pin/"]')?.href
-            };
-        }).filter(pin => pin.url && pin.image);
+        return {
+          id: pin.getAttribute('data-pin-id') || Date.now().toString(),
+          title: titleEl?.textContent?.trim() || titleEl?.getAttribute('title')?.trim() || 'Untitled Pin',
+          description: pin.querySelector('[data-test-id="pin-description"]')?.textContent?.trim() || '',
+          image: imageUrl,
+          url: link?.href
+        };
+      }).filter(pin => pin.url && pin.image);
     });
 
-    console.log(`📌 Found ${pins.length} suggestion pins for board ${boardId}`);
+    console.log(`📌 Found ${pins.length} suggestion pins`);
     return pins;
 
   } catch (error) {
@@ -113,7 +109,8 @@ async function scrapeAllBoards() {
       );
       console.log(`✅ Saved ${pins.length} pins for ${feed.id}`);
     } else {
-      console.error(`⚠️ No pins found for ${feed.id}`);
+      console.error(`⚠️ No pins found for ${feed.id}, trying alternate method...`);
+      // You could add fallback scraping method here if needed
     }
   }
   
