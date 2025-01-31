@@ -13,7 +13,7 @@ async function scrapePinterestBoard(boardId) {
   try {
     // fixed the syntax error here
     const context = await browser.newContext(
-      existsSync('auth.json') 
+      existsSync()'auth.json') 
         ? { storageState: 'auth.json' }
         : {}
     );
