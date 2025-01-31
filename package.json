@@ -1,0 +1,11 @@
+{
+  "name": "snout",
+  "type": "module",
+  "dependencies": {
+    "playwright": "^1.41.2",
+    "rss": "^1.2.2"
+  },
+  "scripts": {
+    "start": "node src/scraper.js && node src/generator.js"
+  }
+}

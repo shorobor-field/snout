@@ -1,0 +1,10 @@
+{
+  "feeds": [
+    {
+      "id": "vibes",
+      "title": "pinterest vibes",
+      "description": "auto-curated pinterest suggestions", 
+      "boardId": "854417429245784480"
+    }
+  ]
+}
