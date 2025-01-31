@@ -1,6 +1,6 @@
 import { chromium } from 'playwright';
 import fs from 'fs/promises';
-import { existsSync } from 'fs';
+import { existsSync } from 'fs';  // add this import
 import path from 'path';
 import config from '../config.json' assert { type: 'json' };
 
@@ -11,9 +11,9 @@ async function scrapePinterestBoard(boardId) {
   const browser = await chromium.launch({ headless: true });
   
   try {
-    // reuse auth if exists
+    // fixed the syntax error here
     const context = await browser.newContext(
-      existsSync('auth.json')  // <-- fixed syntax
+      existsSync('auth.json') 
         ? { storageState: 'auth.json' }
         : {}
     );
