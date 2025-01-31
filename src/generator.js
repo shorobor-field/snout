@@ -4,6 +4,14 @@ import fs from 'fs/promises';
 import path from 'path';
 import config from '../config.json' assert { type: 'json' };
 
+function chunkArray(array, size) {
+  const chunks = [];
+  for (let i = 0; i < array.length; i += size) {
+    chunks.push(array.slice(i, i + size));
+  }
+  return chunks;
+}
+
 async function generateFeed(feedConfig) {
   const { id, title, description, boardId } = feedConfig;
   
@@ -20,18 +28,29 @@ async function generateFeed(feedConfig) {
       site_url: "https://pinterest.com",
     });
 
-    // add pins to feed
-    pins.forEach(pin => {
+    // batch pins into groups of 10
+    const batches = chunkArray(pins, 10);
+    
+    // add each batch as a single item
+    batches.forEach((batch, index) => {
+      const batchHtml = batch.map(pin => `
+        <div style="margin-bottom: 2rem; padding: 1rem; border-bottom: 1px solid #eee;">
+          <img src="${pin.image}" style="width: 100%; max-width: 600px; border-radius: 8px;">
+          <h3 style="margin: 1rem 0;">${pin.title}</h3>
+          ${pin.description ? `<p style="margin: 1rem 0;">${pin.description}</p>` : ''}
+          <a href="${pin.url}" style="color: #0066cc; text-decoration: none;">View on Pinterest</a>
+        </div>
+      `).join('\n');
+
       feed.item({
-        title: pin.title,
+        title: `${title} - Batch ${index + 1}`,
         description: `
-          <div style="padding: 1rem;">
-            <img src="${pin.image}" style="width: 100%; border-radius: 8px;">
-            ${pin.description ? `<p style="margin-top: 1rem;">${pin.description}</p>` : ''}
+          <div style="font-family: system-ui, sans-serif;">
+            ${batchHtml}
           </div>
         `,
-        url: pin.url,
-        guid: pin.id,
+        url: `https://pinterest.com/pin/${boardId}`,
+        guid: `${id}-batch-${index}-${Date.now()}`,
         date: new Date()
       });
     });
@@ -45,7 +64,7 @@ async function generateFeed(feedConfig) {
       feed.xml({indent: true})
     );
 
-    console.log(`✨ generated feed for ${id}`);
+    console.log(`✨ generated feed for ${id} with ${batches.length} batches`);
   } catch (error) {
     console.error(`💀 failed generating ${id}:`, error);
   }
@@ -59,7 +78,7 @@ async function generateAllFeeds() {
     await generateFeed(feed);
   }
   
-  // generate simple index page
+  // generate index page
   const indexHtml = `
 <!DOCTYPE html>
 <html lang="en">
@@ -90,18 +109,11 @@ async function generateAllFeeds() {
             margin-bottom: 1rem;
             color: #666;
         }
-        .feed-card a {
-            color: #0066cc;
-            text-decoration: none;
-        }
-        .feed-card a:hover {
-            text-decoration: underline;
-        }
     </style>
 </head>
 <body>
     <h1>🐕 snout</h1>
-    <p>Auto-generated Pinterest RSS feeds:</p>
+    <p>Auto-generated Pinterest RSS feeds: (10 pins per entry)</p>
     
     ${config.feeds.map(feed => `
         <div class="feed-card">
