@@ -1,6 +1,6 @@
 import { chromium } from 'playwright';
 import fs from 'fs/promises';
-import { existsSync } from 'fs';  // add this import
+import { existsSync } from 'fs';
 import path from 'path';
 import config from '../config.json' assert { type: 'json' };
 
@@ -11,9 +11,8 @@ async function scrapePinterestBoard(boardId) {
   const browser = await chromium.launch({ headless: true });
   
   try {
-    // fixed the syntax error here
     const context = await browser.newContext(
-      fs.existsSync('auth.json') 
+      existsSync('auth.json') 
         ? { storageState: 'auth.json' }
         : {}
     );
@@ -21,7 +20,7 @@ async function scrapePinterestBoard(boardId) {
     const page = await context.newPage();
 
     // only login if we need to
-    if (!fs.existsSync('auth.json')) {  // <-- fixed here too
+    if (!existsSync('auth.json')) {
       console.log('🔑 first time login...');
       await page.goto('https://pinterest.com/login');
       await page.fill('#email', PINTEREST_EMAIL);
@@ -34,7 +33,7 @@ async function scrapePinterestBoard(boardId) {
     }
 
     console.log(`🎯 scraping board ${boardId}...`);
-    await page.goto(`https://pinterest.com/?boardId=${boardId}`);
+    await page.goto(`https://pinterest.com/board/${boardId}`);
     
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     await page.waitForTimeout(2000);
