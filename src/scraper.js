@@ -31,7 +31,8 @@ async function scrapePinterestBoard(boardId) {
     await page.waitForTimeout(3000);
 
     console.log(`🎯 getting suggestions for board ${boardId}...`);
-    await page.goto(`https://pinterest.com/ideas/${boardId}`, { timeout: 60000 });
+    // Using the correct URL format as shown in your screenshot
+    await page.goto(`https://pinterest.com/?boardId=${boardId}`, { timeout: 60000 });
     await page.waitForTimeout(3000);
 
     // Scroll a few times to ensure content loads
@@ -109,8 +110,7 @@ async function scrapeAllBoards() {
       );
       console.log(`✅ Saved ${pins.length} pins for ${feed.id}`);
     } else {
-      console.error(`⚠️ No pins found for ${feed.id}, trying alternate method...`);
-      // You could add fallback scraping method here if needed
+      console.error(`⚠️ No pins found for ${feed.id}`);
     }
   }
   
