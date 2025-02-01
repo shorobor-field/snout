@@ -2,11 +2,12 @@
 import RSS from 'rss';
 import fs from 'fs/promises';
 import { readFileSync } from 'fs';
+import { dirname } from 'path';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __dirname = dirname(__filename);
 const configPath = path.join(__dirname, '..', 'config.json');
 
 // Read config
@@ -47,6 +48,7 @@ async function generateFeed(feedConfig) {
     // ensure data directory exists
     const dataDir = path.join(__dirname, '..', 'data');
     await fs.mkdir(dataDir, { recursive: true });
+
     const dataPath = path.join(__dirname, '..', 'data', `${id}.json`);
     const data = await fs.readFile(dataPath, 'utf-8');
     const pins = JSON.parse(data);

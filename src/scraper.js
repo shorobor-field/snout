@@ -1,8 +1,13 @@
 // src/scraper.js
 import { chromium } from 'playwright';
 import fs from 'fs/promises';
+import { dirname } from 'path';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import config from '../config.json' assert { type: 'json' };
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const PINTEREST_SESSION = process.env.PINTEREST_SESSION;
 
