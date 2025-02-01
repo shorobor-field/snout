@@ -161,31 +161,74 @@ async function scrapePinterestBoard(page, boardUrl) {
 async function getUserSession(userId) {
   const envVar = `PINTEREST_SESSION_${userId.toUpperCase()}`;
   
-  // Log environment variables for debugging
-  console.log('=== Environment Variable Debug ===');
-  console.log('Full environment:', JSON.stringify(process.env, null, 2));
-  console.log('Attempting to retrieve:', envVar);
+  console.log('===== Precise Session Retrieval =====');
   
-  // Check if the environment variable is defined at all
-  if (!(envVar in process.env)) {
-    console.error(`❌ Environment variable ${envVar} is NOT defined`);
+  // Directly log the raw environment variable value
+  const rawSessionValue = process.env[envVar];
+  
+  console.log('Raw environment variable value:');
+  console.log('- Exact raw value:', JSON.stringify(rawSessionValue));
+  console.log('- typeof:', typeof rawSessionValue);
+  console.log('- JSON.stringify representation:', 
+    rawSessionValue ? JSON.stringify(rawSessionValue) : 'UNDEFINED'
+  );
+  
+  if (!rawSessionValue) {
     throw new Error(`No Pinterest session found for user ${userId} (missing ${envVar})`);
   }
-
-  const session = process.env[envVar];
   
-  // Log session information without fully exposing the secret
-  console.log('Session variable status:');
-  console.log(`- Is defined: ${session !== undefined}`);
-  console.log(`- Length: ${session ? session.length : 'N/A'}`);
-  console.log(`- First 4 chars: ${session ? session.slice(0, 4) + '...' : 'N/A'}`);
-  
-  if (!session) {
-    throw new Error(`Pinterest session for user ${userId} is empty (${envVar})`);
-  }
-  
-  return session;
+  return rawSessionValue;
 }
+
+async function ensureLogin(page, sessionCookie) {
+  try {
+    console.log('===== Precise Login Attempt =====');
+    console.log('Raw session cookie input (EXACT):');
+    console.log(JSON.stringify(sessionCookie));
+    console.log('Session cookie type:', typeof sessionCookie);
+    
+    // Validate session cookie
+    if (!sessionCookie || typeof sessionCookie !== 'string') {
+      throw new Error('Session cookie is not a string');
+    }
+
+    await page.goto('https://pinterest.com', { timeout: 60000 });
+    
+    // Use the EXACT session cookie without any modifications
+    const cookieToAdd = {
+      name: '_pinterest_sess',
+      value: sessionCookie, // NO TRIMMING, NO MODIFICATIONS
+      domain: '.pinterest.com',
+      path: '/'
+    };
+
+    console.log('Prepared cookie for addition:', {
+      name: cookieToAdd.name,
+      value: cookieToAdd.value ? `${cookieToAdd.value.slice(0, 10)}...` : 'EMPTY',
+      domain: cookieToAdd.domain,
+      path: cookieToAdd.path
+    });
+
+    await page.context().addCookies([cookieToAdd]);
+
+    console.log('Cookies added, reloading page...');
+    await page.reload();
+
+    console.log('Waiting for login selectors...');
+    await page.waitForSelector('[data-test-id="header-avatar"], [data-test-id="homefeed-feed"]', {
+      timeout: 20000
+    });
+    
+    console.log('✅ Login successful!');
+    return true;
+  } catch (error) {
+    console.error('❌ Cookie auth failed:', error.message);
+    console.error('Full error details:', error);
+    return false;
+  }
+}
+
+export { getUserSession, ensureLogin };
 
 export default getUserSession;
 
