@@ -28,6 +28,24 @@ async function ensureLogin(page) {
   }
 }
 
+async function getShareLink(page, pinId) {
+  try {
+    await page.goto(`https://pinterest.com/pin/${pinId}`);
+    await page.waitForSelector('[data-test-id="share-button"]');
+    await page.click('[data-test-id="share-button"]');
+    
+    const shareUrl = await page.evaluate(() => {
+      const input = document.querySelector('input[value^="https://pin.it/"]');
+      return input ? input.value : null;
+    });
+    
+    return shareUrl;
+  } catch (error) {
+    console.error(`Failed to get share link for pin ${pinId}:`, error);
+    return null;
+  }
+}
+
 async function verifyImageUrl(page, url) {
   if (!url) return false;
   try {
@@ -85,12 +103,13 @@ async function scrapePinterestBoard(boardId) {
         const link = container.querySelector('a[href*="/pin/"]');
         
         const imgSrc = img?.src?.replace(/\/\d+x\//, '/originals/').replace(/\?fit=.*$/, '');
+        const pinId = link?.href?.match(/\/pin\/(\d+)/)?.[1];
         
         return {
-          id: link?.href?.match(/\/pin\/(\d+)/)?.[1] || Date.now().toString(),
+          id: pinId || Date.now().toString(),
           title: img?.alt || '',
           image: imgSrc,
-          url: link?.href,
+          url: null, // we'll fill this with share link later
           description: container.textContent?.trim() || ''
         };
       }).filter(Boolean);
@@ -99,7 +118,12 @@ async function scrapePinterestBoard(boardId) {
     const verifiedPins = [];
     for (const pin of pins) {
       if (await verifyImageUrl(page, pin.image)) {
-        verifiedPins.push(pin);
+        // Get share link for each pin
+        const shareUrl = await getShareLink(page, pin.id);
+        if (shareUrl) {
+          pin.url = shareUrl;
+          verifiedPins.push(pin);
+        }
       }
     }
 
