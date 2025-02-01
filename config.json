@@ -3,17 +3,8 @@
     {
       "id": "raiyan-fashion",
       "title": "Fashion",
-      "description": "",
-      "boardId": "854417429245692977",
-      "schedule": {
-        "monday": true,
-        "tuesday": true,
-        "wednesday": true,
-        "thursday": true,
-        "friday": true,
-        "saturday": true,
-        "sunday": true
-      }
+      "description": "", 
+      "boardId": "854417429245709127"
     }
   ]
 }
