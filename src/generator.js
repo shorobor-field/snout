@@ -160,7 +160,7 @@ async function generateAllFeeds() {
         <div style="text-align: center; margin-top: 40px; color: #666;">
           <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
           <p>Last updated: ${new Date().toLocaleString()}</p>
-          <p>🐕 woof woof!</p>
+          <p>🐕 woof!</p>
         </div>
       </div>
     </body>
