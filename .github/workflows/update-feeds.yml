@@ -10,6 +10,10 @@ permissions:
   pages: write
   id-token: write
 
+env:
+  PINTEREST_SESSION_RAIYAN: ${{ secrets.PINTEREST_SESSION_RAIYAN }}
+  PINTEREST_SESSION_ZARIN: ${{ secrets.PINTEREST_SESSION_ZARIN }}
+
 jobs:
   update:
     runs-on: ubuntu-latest
@@ -50,8 +54,6 @@ jobs:
         run: |
           export DEBUG=pw:api
           NODE_OPTIONS="--max-old-space-size=4096" npm start
-        env:
-          PINTEREST_SESSION: ${{ secrets.PINTEREST_SESSION }}
       
       # Upload debug screenshots
       - name: Upload debug screenshots

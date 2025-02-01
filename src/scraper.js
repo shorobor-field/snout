@@ -94,7 +94,7 @@ async function scrapePinterestBoard(page, boardUrl) {
         ...document.querySelectorAll('[data-test-id="pin"]'),
         ...document.querySelectorAll('[role="listitem"]'),
         ...document.querySelectorAll('div[data-grid-item="true"]')
-      ].slice(0, 20); // take first 20 before processing in case some fail verification
+      ].slice(0, 15); // take first 15 before processing in case some fail verification
       
       return containers.map(container => {
         if (!container) return null;
@@ -132,8 +132,21 @@ async function scrapePinterestBoard(page, boardUrl) {
   }
 }
 
+async function getUserSession(userId) {
+  const envVar = `PINTEREST_SESSION_${userId.toUpperCase()}`;
+  const session = process.env[envVar];
+  
+  if (!session) {
+    throw new Error(`No Pinterest session found for user ${userId} (missing ${envVar})`);
+  }
+  
+  return session;
+}
+
 async function scrapeUserBoards(user) {
   console.log(`\n🚀 Starting scrape for user: ${user.id}`);
+  
+  const session = await getUserSession(user.id);
   
   const browser = await chromium.launch({ 
     headless: true,
