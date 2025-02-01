@@ -63,14 +63,35 @@ async function ensureLogin(page) {
 async function scrapePinterestBoard(boardId) {
   const browser = await chromium.launch({ 
     headless: true,
-    args: ['--window-size=1920,1080', '--no-sandbox']
+    args: [
+      '--window-size=1920,1080',
+      '--no-sandbox',
+      '--disable-web-security',
+      '--disable-features=IsolateOrigins,site-per-process',
+      '--disable-site-isolation-trials'
+    ]
   });
   
   try {
     const context = await browser.newContext({
       viewport: { width: 1920, height: 1080 },
       deviceScaleFactor: 2,
-      userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      ignoreHTTPSErrors: true,
+      permissions: ['geolocation'],
+      bypassCSP: true,
+      // Add common headers to look more like a real browser
+      extraHTTPHeaders: {
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'sec-ch-ua': '"Not_A Brand";v="8", "Chromium";v="120"',
+        'sec-ch-ua-mobile': '?0',
+        'sec-ch-ua-platform': '"macOS"',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'none',
+        'Sec-Fetch-User': '?1',
+      }
     });
     
     const page = await context.newPage();
@@ -82,11 +103,13 @@ async function scrapePinterestBoard(boardId) {
 
     console.log(`🎯 getting pins from board ${boardId}...`);
     
-    // Try different Pinterest board URL formats
+    // Try different Pinterest board URL formats with mobile endpoints
     const urls = [
       `https://pinterest.com/pin/${boardId}/`,
+      `https://www.pinterest.com/_ngjs/board/${boardId}/`,
+      `https://www.pinterest.com/ideas/${boardId}/`,
       `https://pinterest.com/board/${boardId}/`,
-      `https://pinterest.com/w/${boardId}/`
+      `https://www.pinterest.com/resource/BoardResource/get/?source_url=/board/${boardId}/&data={"options":{"board_id":"${boardId}"}}`
     ];
     
     let loaded = false;
