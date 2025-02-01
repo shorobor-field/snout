@@ -72,7 +72,7 @@ async function generateFeed(userId, feedConfig) {
             return `
               <div style="flex: 1 1 300px; max-width: 400px; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
                 <img src="${pin.image}" alt="${title || 'Pin image'}" 
-                     style="width: 100%; aspect-ratio: 4/3; object-fit: cover;"
+                     style="width: 100%; object-fit: contain; max-height: 600px; background: #f0f0f0;"
                      onerror="this.style.display='none'">
                 <div style="padding: 16px;">
                   ${title ? `<h3 style="margin: 0 0 8px 0; font-size: 18px; color: #1a1a1a;">${title}</h3>` : ''}
