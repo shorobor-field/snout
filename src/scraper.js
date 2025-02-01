@@ -6,6 +6,23 @@ import config from '../config.json' assert { type: 'json' };
 // Cookie should be added as a GitHub secret
 const PINTEREST_SESSION = process.env.PINTEREST_SESSION;
 
+async function ensureScreenshotDir() {
+  const dir = './debug-screenshots';
+  await fs.mkdir(dir, { recursive: true });
+  return dir;
+}
+
+async function takeScreenshot(page, name) {
+  const dir = await ensureScreenshotDir();
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const path = `${dir}/${name}-${timestamp}.png`;
+  await page.screenshot({ 
+    path,
+    fullPage: true 
+  });
+  console.log(`📸 Saved screenshot: ${path}`);
+}
+
 async function ensureLogin(page) {
   try {
     console.log('🍪 Setting up cookie-based auth...');
@@ -41,18 +58,6 @@ async function ensureLogin(page) {
     await takeScreenshot(page, 'error-state');
     return false;
   }
-}
-
-async function takeScreenshot(page, name) {
-  const dir = './debug-screenshots';
-  await fs.mkdir(dir, { recursive: true });
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const path = `${dir}/${name}-${timestamp}.png`;
-  await page.screenshot({ 
-    path,
-    fullPage: true 
-  });
-  console.log(`📸 Saved screenshot: ${path}`);
 }
 
 async function scrapePinterestBoard(boardId) {
@@ -101,8 +106,9 @@ async function scrapePinterestBoard(boardId) {
     
     if (!loaded) {
       throw new Error('Could not load board with any known URL format');
-    await page.waitForLoadState('networkidle');
+    }
     
+    await page.waitForLoadState('networkidle');
     await takeScreenshot(page, '3-board-page');
     
     // Wait for content to load
@@ -146,6 +152,7 @@ async function scrapePinterestBoard(boardId) {
     });
 
     return pins;
+
   } catch (error) {
     console.error(`💀 failed scraping board ${boardId}:`, error);
     return [];
