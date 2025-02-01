@@ -47,9 +47,24 @@ async function verifyImageUrl(page, url) {
 async function scrapePinterestBoard(page, boardUrl) {
   try {
     console.log(`🔍 navigating to ${boardUrl}...`);
+    
+    // First navigate to board
     await page.goto(boardUrl);
     await page.waitForTimeout(3000);
+
+    // Look for "More ideas" button and click it
+    console.log('looking for more ideas button...');
+    const moreIdeasButton = await page.getByRole('button', { name: 'More ideas' });
+    await moreIdeasButton.click();
+    
+    // Wait for the new content to load
+    await page.waitForTimeout(5000);
     await page.waitForSelector('img', { timeout: 10000 });
+    
+    // Scroll a bit to load more content
+    await page.evaluate(() => {
+      window.scrollBy(0, window.innerHeight * 2);
+    });
     await page.waitForTimeout(3000);
 
     let pins = await page.evaluate(() => {
@@ -90,7 +105,7 @@ async function scrapePinterestBoard(page, boardUrl) {
     return verifiedPins;
 
   } catch (error) {
-    console.error(`Failed scraping board ${boardUrl}:`, error);
+    console.error(`Failed scraping more ideas for ${boardUrl}:`, error);
     return [];
   }
 }
