@@ -72,6 +72,7 @@ async function scrapePinterestBoard(boardUrl) {
       throw new Error('Login failed');
     }
 
+    console.log(`🔍 navigating to ${boardUrl}...`);
     // directly navigate to the board url
     await page.goto(boardUrl);
     await page.waitForTimeout(3000);
@@ -79,11 +80,14 @@ async function scrapePinterestBoard(boardUrl) {
     await page.waitForTimeout(3000);
 
     let pins = await page.evaluate(() => {
-      const saveButtons = Array.from(document.querySelectorAll('svg[aria-label="Save"]'));
-      return saveButtons.map(btn => {
-        const container = btn.closest('[data-test-id="pin"]') || 
-                         btn.closest('[role="listitem"]');
-        
+      // try multiple selectors since pinterest's markup changes often
+      const containers = [
+        ...document.querySelectorAll('[data-test-id="pin"]'),
+        ...document.querySelectorAll('[role="listitem"]'),
+        ...document.querySelectorAll('div[data-grid-item="true"]')
+      ];
+      
+      return containers.map(container => {
         if (!container) return null;
 
         const img = container.querySelector('img');
@@ -101,6 +105,8 @@ async function scrapePinterestBoard(boardUrl) {
       }).filter(Boolean);
     });
 
+    console.log(`Found ${pins.length} potential pins, verifying images...`);
+
     const verifiedPins = [];
     for (const pin of pins) {
       if (await verifyImageUrl(page, pin.image)) {
@@ -108,6 +114,7 @@ async function scrapePinterestBoard(boardUrl) {
       }
     }
 
+    console.log(`Verified ${verifiedPins.length} pins with valid images`);
     return verifiedPins;
 
   } catch (error) {
@@ -127,8 +134,9 @@ async function scrapeAllBoards() {
     const pins = await scrapePinterestBoard(feed.boardUrl);
     
     if (pins.length > 0) {
+      const dataPath = path.join(__dirname, '..', 'data', `${feed.id}.json`);
       await fs.writeFile(
-        `./data/${feed.id}.json`,
+        dataPath,
         JSON.stringify(pins, null, 2)
       );
       console.log(`✨ Saved ${pins.length} pins for ${feed.id}`);
