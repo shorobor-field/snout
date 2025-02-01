@@ -4,11 +4,14 @@
       "id": "raiyan",
       "feeds": [
         {
-          "id": "dseing",
-          "title": "garphec vibes",
-          "description": "auraphd dsingest suggestions",
+          "id": "raiyan-fashion",
+          "title": "Fashion",
+          "description": "Look like Raiyan Rahman? What does Raiyan Rahman even look like",
           "boardUrl": "https://www.pinterest.com/raiyanrahmanxx/fashion/",
-          "schedule": ["monday", "thursday"]
+          "schedule": [
+            "monday",
+            "thursday"
+          ]
         }
       ]
     },
@@ -16,11 +19,98 @@
       "id": "zarin",
       "feeds": [
         {
-          "id": "inspo",
-          "title": "aesthetic board",
-          "description": "daily inspo",
+          "id": "zarin-arch",
+          "title": "Architecture",
+          "description": "",
           "boardUrl": "https://www.pinterest.com/zarintasnim0810/architecture/",
-          "schedule": ["daily"]
+          "schedule": [
+            "sunday",
+            "saturday",
+            "monday",
+            "tuesday",
+            "wednesday",
+            "friday"
+          ]
+        },
+        {
+          "id": "zarin-renders",
+          "title": "Renders",
+          "description": "",
+          "boardUrl": "https://www.pinterest.com/zarintasnim0810/renders/",
+          "schedule": [
+            "monday",
+            "wednesday",
+            "saturday"
+          ]
+        },
+        {
+          "id": "zarin-cat",
+          "title": "Cats",
+          "description": "",
+          "boardUrl": "https://www.pinterest.com/zarintasnim0810/cat/",
+          "schedule": [
+            "daily"
+          ]
+        },
+        {
+          "id": "zarin-fashion",
+          "title": "Fashion",
+          "description": "",
+          "boardUrl": "https://www.pinterest.com/zarintasnim0810/fashion/",
+          "schedule": [
+            "sunday",
+            "tuesday",
+            "thursday"
+          ]
+        },
+        {
+          "id": "zarin-feminism",
+          "title": "Feminism",
+          "description": "",
+          "boardUrl": "https://www.pinterest.com/zarintasnim0810/feminism/",
+          "schedule": [
+            "daily"
+          ]
+        },
+        {
+          "id": "zarin-desi",
+          "title": "Desi",
+          "description": "",
+          "boardUrl": "https://www.pinterest.com/zarintasnim0810/desi/",
+          "schedule": [
+            "sunday",
+            "tuesday",
+            "thursday"
+          ]
+        },
+        {
+          "id": "zarin-poster",
+          "title": "Posters",
+          "description": "",
+          "boardUrl": "https://www.pinterest.com/zarintasnim0810/poster/",
+          "schedule": [
+            "monday",
+            "wednesday",
+            "saturday"
+          ]
+        },
+        {
+          "id": "zarin-heart",
+          "title": "<3",
+          "description": "",
+          "boardUrl": "https://www.pinterest.com/zarintasnim0810/3/",
+          "schedule": [
+            "daily"
+          ]
+        },
+        {
+          "id": "zarin-poems",
+          "title": "Poems",
+          "description": "",
+          "boardUrl": "https://www.pinterest.com/zarintasnim0810/poems/",
+          "schedule": [
+            "daily"
+          ]
         }
       ]
     }
