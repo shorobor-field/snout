@@ -7,129 +7,108 @@ import config from '../config.json' assert { type: 'json' };
 const PINTEREST_EMAIL = process.env.PINTEREST_EMAIL;
 const PINTEREST_PASSWORD = process.env.PINTEREST_PASSWORD;
 
+async function ensureLogin(page) {
+  try {
+    console.log('🔑 attempting login...');
+    await page.goto('https://pinterest.com/login', { timeout: 60000 });
+    await page.waitForLoadState('domcontentloaded');
+    
+    // Wait for email input to be ready
+    await page.waitForSelector('#email', { timeout: 10000 });
+    
+    await page.fill('#email', PINTEREST_EMAIL);
+    await page.fill('#password', PINTEREST_PASSWORD);
+    await page.click('button[type="submit"]');
+    
+    // Wait for login to complete - look for avatar or home feed
+    await page.waitForSelector('[data-test-id="header-avatar"], [data-test-id="homefeed-feed"]', {
+      timeout: 20000
+    });
+    
+    console.log('✅ Login successful');
+    return true;
+  } catch (error) {
+    console.error('❌ Login failed:', error.message);
+    return false;
+  }
+}
+
 async function scrapePinterestBoard(boardId) {
   const browser = await chromium.launch({ 
     headless: true,
-    args: ['--window-size=1920,1080']
+    args: ['--window-size=1920,1080', '--no-sandbox']
   });
   
   try {
     const context = await browser.newContext({
       viewport: { width: 1920, height: 1080 },
       deviceScaleFactor: 2,
+      userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
     });
     
     const page = await context.newPage();
-
-    // Add debug logging
     page.on('console', msg => console.log('Browser log:', msg.text()));
 
-    console.log('🔑 attempting login...');
-    await page.goto('https://pinterest.com/login', { timeout: 60000 });
-    await page.waitForLoadState('domcontentloaded');
-    
-    await page.fill('#email', PINTEREST_EMAIL);
-    await page.fill('#password', PINTEREST_PASSWORD);
-    await page.click('button[type="submit"]');
-    await page.waitForTimeout(3000);
+    if (!await ensureLogin(page)) {
+      throw new Error('Login failed');
+    }
 
     console.log(`🎯 getting suggestions for board ${boardId}...`);
     const url = `https://pinterest.com/?boardId=${boardId}`;
-    console.log('Navigating to:', url);
     await page.goto(url, { timeout: 60000 });
+    await page.waitForLoadState('networkidle');
     
-    // Wait longer and log progress
-    console.log('Waiting for initial load...');
+    // Wait for content to load
     await page.waitForTimeout(5000);
 
-    // Scroll and log progress
-    console.log('Starting scrolls...');
+    // Scroll multiple times with pauses
     for (let i = 0; i < 5; i++) {
-      await page.evaluate((i) => {
+      await page.evaluate(() => {
         window.scrollBy(0, window.innerHeight);
-        console.log(`Scroll ${i + 1} completed`);
-      }, i);
+      });
       await page.waitForTimeout(2000);
     }
 
-    // Debug page content
-    console.log('Analyzing page content...');
-    const debugInfo = await page.evaluate(() => {
-      const texts = Array.from(document.querySelectorAll('div'))
-        .map(div => div.textContent)
-        .filter(text => text && text.includes('More ideas'));
-      
-      const gridItems = document.querySelectorAll('[data-grid-item="true"]');
-      const images = document.querySelectorAll('img');
-      
-      return {
-        foundMoreIdeasTexts: texts,
-        totalGridItems: gridItems.length,
-        totalImages: images.length,
-        pageHeight: document.body.scrollHeight,
-        viewportHeight: window.innerHeight
-      };
-    });
-    
-    console.log('Debug info:', debugInfo);
-
     const pins = await page.evaluate(() => {
-      // Try different selectors
-      const selectors = [
-        '[data-grid-item="true"]',
-        '[data-test-id="pin"]',
-        '[data-test-id="pinrep"]',
-        '.Grid__Item'
-      ];
-      
-      let suggestions = [];
-      
-      for (const selector of selectors) {
-        const elements = document.querySelectorAll(selector);
-        console.log(`Found ${elements.length} elements with selector ${selector}`);
-        if (elements.length > 0) {
-          suggestions = Array.from(elements);
-          break;
-        }
-      }
+      // Find all divs that have both an image and a link
+      const allDivs = Array.from(document.querySelectorAll('div'));
+      const pinDivs = allDivs.filter(div => {
+        const hasImage = div.querySelector('img');
+        const hasLink = div.querySelector('a[href*="/pin/"]');
+        const rect = div.getBoundingClientRect();
+        // Only include elements that are reasonably sized (likely to be pins)
+        return hasImage && hasLink && rect.width > 100 && rect.height > 100;
+      });
 
-      return suggestions.map(pin => {
-        const img = pin.querySelector('img');
-        const link = pin.querySelector('a');
-        const titleEl = pin.querySelector('[data-test-id="pin-title"]') || 
-                       pin.querySelector('[title]');
+      console.log(`Found ${pinDivs.length} potential pins`);
+
+      return pinDivs.map(div => {
+        const img = div.querySelector('img');
+        const link = div.querySelector('a[href*="/pin/"]');
         
+        // Get the highest quality image URL
         let imageUrl = img?.src;
         if (imageUrl) {
-          imageUrl = imageUrl.replace(/\/\d+x\//, '/originals/');
+          // Remove size constraints from URL to get original
+          imageUrl = imageUrl.replace(/\/\d+x\//, '/originals/')
+                            .replace(/\?fit=.*$/, '');
         }
 
-        const pinData = {
-          id: pin.getAttribute('data-pin-id') || Date.now().toString(),
-          title: titleEl?.textContent?.trim() || titleEl?.getAttribute('title')?.trim() || 'Untitled Pin',
-          description: pin.querySelector('[data-test-id="pin-description"]')?.textContent?.trim() || '',
+        return {
+          id: link?.href?.match(/\/pin\/(\d+)/)?.[1] || Date.now().toString(),
+          title: img?.alt || 'Untitled Pin',
           image: imageUrl,
-          url: link?.href
+          url: link?.href,
+          description: div.textContent?.trim() || ''
         };
-        
-        console.log('Extracted pin data:', pinData);
-        return pinData;
       }).filter(pin => pin.url && pin.image);
     });
 
-    console.log(`📌 Found ${pins.length} suggestion pins`);
+    console.log(`📌 Found ${pins.length} pins`);
     return pins;
 
   } catch (error) {
     console.error(`💀 failed scraping board ${boardId}:`, error);
-    
-    // Log the full error with stack trace
-    console.error('Detailed error:', {
-      message: error.message,
-      stack: error.stack,
-      name: error.name
-    });
-    
     return [];
   } finally {
     await browser.close();
