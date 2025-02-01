@@ -158,19 +158,33 @@ async function scrapePinterestBoard(page, boardUrl) {
 async function getUserSession(userId) {
   const envVar = `PINTEREST_SESSION_${userId.toUpperCase()}`;
   
-  // Log all potential ways of accessing the secret
-  console.log('Env var name:', envVar);
-  console.log('Direct access:', process.env[envVar]);
-  console.log('Process env keys:', Object.keys(process.env).filter(k => k.includes('PINTEREST')));
-
-  const session = process.env[envVar];
+  // Log environment variables for debugging
+  console.log('=== Environment Variable Debug ===');
+  console.log('Full environment:', JSON.stringify(process.env, null, 2));
+  console.log('Attempting to retrieve:', envVar);
   
-  if (!session) {
+  // Check if the environment variable is defined at all
+  if (!(envVar in process.env)) {
+    console.error(`❌ Environment variable ${envVar} is NOT defined`);
     throw new Error(`No Pinterest session found for user ${userId} (missing ${envVar})`);
   }
 
+  const session = process.env[envVar];
+  
+  // Log session information without fully exposing the secret
+  console.log('Session variable status:');
+  console.log(`- Is defined: ${session !== undefined}`);
+  console.log(`- Length: ${session ? session.length : 'N/A'}`);
+  console.log(`- First 4 chars: ${session ? session.slice(0, 4) + '...' : 'N/A'}`);
+  
+  if (!session) {
+    throw new Error(`Pinterest session for user ${userId} is empty (${envVar})`);
+  }
+  
   return session;
 }
+
+export default getUserSession;
 
 async function scrapeUserBoards(user) {
   console.log(`\n🚀 Starting scrape for user: ${user.id}`);
