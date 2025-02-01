@@ -134,7 +134,13 @@ async function scrapePinterestBoard(page, boardUrl) {
 
 async function getUserSession(userId) {
   const envVar = `PINTEREST_SESSION_${userId.toUpperCase()}`;
+  console.log('ALL ENVIRONMENT VARIABLES:', Object.keys(process.env));
+  console.log(`Checking for environment variable: ${envVar}`);
+  
   const session = process.env[envVar];
+  
+  console.log(`Raw session value: ${session}`);
+  console.log(`Session type: ${typeof session}`);
   
   if (!session) {
     throw new Error(`No Pinterest session found for user ${userId} (missing ${envVar})`);
