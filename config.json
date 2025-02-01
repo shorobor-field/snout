@@ -9,7 +9,7 @@
           "title": "garphec vibes",
           "description": "auraphd dsingest suggestions",
           "boardUrl": "https://www.pinterest.com/raiyanrahmanxx/fashion/"
-          "schedule": ["monday", "thursday"] // case insensitive
+          "schedule": ["monday", "thursday"]
         }
       ]
     },
@@ -22,7 +22,7 @@
           "title": "aesthetic board",
           "description": "daily inspo",
           "boardUrl": "https://www.pinterest.com/zarintasnim0810/architecture/"
-          "schedule": ["daily"] // special keyword for every day
+          "schedule": ["daily"]
         }
       ]
     }
