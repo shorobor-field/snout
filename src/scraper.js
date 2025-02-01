@@ -94,7 +94,7 @@ async function scrapePinterestBoard(page, boardUrl) {
         ...document.querySelectorAll('[data-test-id="pin"]'),
         ...document.querySelectorAll('[role="listitem"]'),
         ...document.querySelectorAll('div[data-grid-item="true"]')
-      ];
+      ].slice(0, 20); // take first 20 before processing in case some fail verification
       
       return containers.map(container => {
         if (!container) return null;
