@@ -126,18 +126,23 @@ async function scrapePinterestBoard(boardId) {
     const pins = await page.evaluate(() => {
       // Find all save buttons
       const saveButtons = Array.from(document.querySelectorAll('svg[aria-label="Save"]'));
+      console.log(`Found ${saveButtons.length} save buttons`);
       
       // Get their parent pin containers
       const pinContainers = saveButtons
         .map(btn => btn.closest('div[role="button"]')?.parentElement?.parentElement)
-        .filter(Boolean) // Remove nulls
-        .slice(0, 20);  // Take first 20
+        .filter(Boolean)
+        .slice(0, 20);
+      
+      console.log(`Found ${pinContainers.length} pin containers`);
 
-      console.log(`Found ${pinContainers.length} pins with save buttons`);
-
-      return pinContainers.map(div => {
+      const results = pinContainers.map(div => {
         const img = div.querySelector('img');
         const link = div.querySelector('a[href*="/pin/"]');
+        
+        // Log what we're finding for debugging
+        console.log('Image:', img?.src);
+        console.log('Link:', link?.href);
         
         let imageUrl = img?.src;
         if (imageUrl) {
@@ -145,15 +150,23 @@ async function scrapePinterestBoard(boardId) {
                             .replace(/\?fit=.*$/, '');
         }
 
-        return {
+        const pin = {
           id: link?.href?.match(/\/pin\/(\d+)/)?.[1] || Date.now().toString(),
           title: img?.alt || 'Untitled Pin',
           image: imageUrl,
           url: link?.href,
           description: div.textContent?.trim() || ''
         };
-      }).filter(pin => pin.url && pin.image);
+
+        console.log('Created pin:', pin);
+        return pin;
+      });
+
+      console.log(`Created ${results.length} pin objects`);
+      return results;
     });
+
+    console.log(`Returned ${pins.length} pins from page.evaluate()`);
 
     console.log(`Found ${pins.length} unique pins with save buttons`);
     await takeScreenshot(page, '3c-after-finding-pins');
