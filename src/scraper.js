@@ -11,13 +11,26 @@ const __dirname = dirname(__filename);
 
 async function ensureLogin(page, sessionCookie) {
   try {
+    console.log('Raw session cookie:', JSON.stringify(sessionCookie));
+    console.log('Session cookie type:', typeof sessionCookie);
+    console.log('Session cookie length:', sessionCookie?.length);
+
+    if (!sessionCookie) {
+      throw new Error('Session cookie is empty or undefined');
+    }
+
     await page.goto('https://pinterest.com', { timeout: 60000 });
-    await page.context().addCookies([{
+    
+    const cookieToAdd = [{
       name: '_pinterest_sess',
-      value: sessionCookie,
+      value: sessionCookie.trim(), // Ensure no whitespace
       domain: '.pinterest.com',
       path: '/'
-    }]);
+    }];
+
+    console.log('Attempting to add cookie:', JSON.stringify(cookieToAdd));
+
+    await page.context().addCookies(cookieToAdd);
 
     await page.reload();
     await page.waitForSelector('[data-test-id="header-avatar"], [data-test-id="homefeed-feed"]', {
@@ -26,7 +39,8 @@ async function ensureLogin(page, sessionCookie) {
     
     return true;
   } catch (error) {
-    console.error('❌ Cookie auth failed:', error.message);
+    console.error('❌ Cookie auth failed:', error);
+    console.error('Full error details:', error.stack);
     return false;
   }
 }
