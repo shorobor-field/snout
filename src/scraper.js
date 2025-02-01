@@ -75,9 +75,32 @@ async function scrapePinterestBoard(boardId) {
       throw new Error('Login failed');
     }
 
-    console.log(`🎯 getting suggestions for board ${boardId}...`);
-    const url = `https://pinterest.com/?boardId=${boardId}`;
-    await page.goto(url, { timeout: 60000 });
+    console.log(`🎯 getting pins from board ${boardId}...`);
+    
+    // Try different Pinterest board URL formats
+    const urls = [
+      `https://pinterest.com/pin/${boardId}/`,
+      `https://pinterest.com/board/${boardId}/`,
+      `https://pinterest.com/w/${boardId}/`
+    ];
+    
+    let loaded = false;
+    for (const url of urls) {
+      try {
+        console.log(`Attempting to load: ${url}`);
+        await page.goto(url, { timeout: 30000 });
+        await page.waitForSelector('img', { timeout: 5000 }); // Check if we got any content
+        loaded = true;
+        console.log(`✅ Successfully loaded: ${url}`);
+        break;
+      } catch (error) {
+        console.log(`Failed to load ${url}: ${error.message}`);
+        continue;
+      }
+    }
+    
+    if (!loaded) {
+      throw new Error('Could not load board with any known URL format');
     await page.waitForLoadState('networkidle');
     
     await takeScreenshot(page, '3-board-page');
