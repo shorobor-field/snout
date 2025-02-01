@@ -120,8 +120,14 @@ async function generateFeed(feedConfig) {
 async function generateAllFeeds() {
   console.log('📡 generating all feeds...');
   
+  const today = new Date().toLocaleLowerCase('en-US', { weekday: 'monday' });
+  
   for (const feed of config.feeds) {
-    await generateFeed(feed);
+    if (feed.schedule && feed.schedule[today]) {
+      await generateFeed(feed);
+    } else {
+      console.log(`skipping ${feed.id} - not scheduled for ${today}`);
+    }
   }
   
   // Create landing page with same styling
@@ -150,6 +156,10 @@ async function generateAllFeeds() {
             <div style="flex: 1 1 300px; max-width: 400px; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 16px;">
               <h3 style="margin: 0 0 8px 0; font-size: 18px; color: #1a1a1a;">${feed.title}</h3>
               ${feed.description ? `<p style="margin: 0 0 12px 0; color: #666; font-size: 14px;">${feed.description}</p>` : ''}
+              <p class="text-sm text-gray-500">Published on: ${Object.entries(feed.schedule)
+                .filter(([_, enabled]) => enabled)
+                .map(([day]) => day)
+                .join(', ')}</p>
               <a href="./feeds/${feed.id}.xml" style="color: #666; text-decoration: none; font-size: 14px;">
                 Subscribe ↗
               </a>

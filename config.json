@@ -3,8 +3,17 @@
     {
       "id": "dseing",
       "title": "garphec vibes",
-      "description": "auraphd dsingest suggestions", 
-      "boardId": "854417429245709127"
+      "description": "auraphd dsingest suggestions",
+      "boardId": "854417429245709127",
+      "schedule": {
+        "monday": true,
+        "tuesday": false,
+        "wednesday": true,
+        "thursday": false,
+        "friday": true,
+        "saturday": false,
+        "sunday": false
+      }
     }
   ]
 }
