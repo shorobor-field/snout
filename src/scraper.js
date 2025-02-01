@@ -1,65 +1,4 @@
-// src/scraper.js
-import { chromium } from 'playwright';
-import fs from 'fs/promises';
-import path from 'path';
-import config from '../config.json' assert { type: 'json' };
-
-const PINTEREST_SESSION = process.env.PINTEREST_SESSION;
-
-async function ensureLogin(page) {
-  try {
-    await page.goto('https://pinterest.com', { timeout: 60000 });
-    await page.context().addCookies([{
-      name: '_pinterest_sess',
-      value: PINTEREST_SESSION,
-      domain: '.pinterest.com',
-      path: '/'
-    }]);
-
-    await page.reload();
-    await page.waitForSelector('[data-test-id="header-avatar"], [data-test-id="homefeed-feed"]', {
-      timeout: 20000
-    });
-    
-    return true;
-  } catch (error) {
-    console.error('❌ Cookie auth failed:', error.message);
-    return false;
-  }
-}
-
-async function getShareLink(page, pinId) {
-  try {
-    await page.goto(`https://pinterest.com/pin/${pinId}`);
-    await page.waitForSelector('[data-test-id="share-button"]');
-    await page.click('[data-test-id="share-button"]');
-    
-    const shareUrl = await page.evaluate(() => {
-      const input = document.querySelector('input[value^="https://pin.it/"]');
-      return input ? input.value : null;
-    });
-    
-    return shareUrl;
-  } catch (error) {
-    console.error(`Failed to get share link for pin ${pinId}:`, error);
-    return null;
-  }
-}
-
-async function verifyImageUrl(page, url) {
-  if (!url) return false;
-  try {
-    const response = await page.evaluate(async (url) => {
-      const res = await fetch(url, { method: 'HEAD' });
-      return res.ok;
-    }, url);
-    return response;
-  } catch {
-    return false;
-  }
-}
-
-async function scrapePinterestBoard(boardId) {
+async function scrapePinterestBoard(shareLink) {
   const browser = await chromium.launch({ 
     headless: true,
     args: [
@@ -85,8 +24,8 @@ async function scrapePinterestBoard(boardId) {
       throw new Error('Login failed');
     }
 
-    const url = `https://www.pinterest.com/?boardId=${boardId}`;
-    await page.goto(url);
+    // Just navigate directly to the pin.it link
+    await page.goto(shareLink, { waitUntil: 'networkidle' });
     await page.waitForTimeout(3000);
     await page.waitForSelector('img', { timeout: 10000 });
     await page.waitForTimeout(3000);
@@ -103,13 +42,12 @@ async function scrapePinterestBoard(boardId) {
         const link = container.querySelector('a[href*="/pin/"]');
         
         const imgSrc = img?.src?.replace(/\/\d+x\//, '/originals/').replace(/\?fit=.*$/, '');
-        const pinId = link?.href?.match(/\/pin\/(\d+)/)?.[1];
         
         return {
-          id: pinId || Date.now().toString(),
+          id: link?.href?.match(/\/pin\/(\d+)/)?.[1] || Date.now().toString(),
           title: img?.alt || '',
           image: imgSrc,
-          url: null, // we'll fill this with share link later
+          url: link?.href,
           description: container.textContent?.trim() || ''
         };
       }).filter(Boolean);
@@ -118,19 +56,14 @@ async function scrapePinterestBoard(boardId) {
     const verifiedPins = [];
     for (const pin of pins) {
       if (await verifyImageUrl(page, pin.image)) {
-        // Get share link for each pin
-        const shareUrl = await getShareLink(page, pin.id);
-        if (shareUrl) {
-          pin.url = shareUrl;
-          verifiedPins.push(pin);
-        }
+        verifiedPins.push(pin);
       }
     }
 
     return verifiedPins;
 
   } catch (error) {
-    console.error(`Failed scraping board ${boardId}:`, error);
+    console.error(`Failed scraping board ${shareLink}:`, error);
     return [];
   } finally {
     await browser.close();
@@ -142,7 +75,7 @@ async function scrapeAllBoards() {
   await fs.mkdir('./data', { recursive: true });
   
   for (const feed of config.feeds) {
-    const pins = await scrapePinterestBoard(feed.boardId);
+    const pins = await scrapePinterestBoard(feed.shareLink);
     
     if (pins.length > 0) {
       await fs.writeFile(
@@ -157,7 +90,3 @@ async function scrapeAllBoards() {
   
   console.log('Done scraping all boards!');
 }
-
-// Clean up old debug screenshots if they exist
-fs.rm('./debug-screenshots', { recursive: true, force: true })
-  .then(() => scrapeAllBoards());

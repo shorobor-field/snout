@@ -1,16 +1,10 @@
 {
   "feeds": [
     {
-      "id": "raiyan-fashion",
-      "title": "Fashion",
-      "description": "", 
-      "boardId": "854417429245709127"
-    },
-    {
-      "id": "ryn-occult",
-      "title": "Occult Underground, Dhaka",
-      "description": "", 
-      "boardId": "854417429245756999"
+      "id": "dseing",
+      "title": "garphec vibes",
+      "description": "auraphd dsingest suggestions",
+      "shareLink": "https://pin.it/1swunImA6"
     }
   ]
 }
