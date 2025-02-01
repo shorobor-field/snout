@@ -119,7 +119,7 @@ async function scrapePinterestBoard(boardId) {
     
     // Wait for the "More ideas" section to appear
     console.log('Waiting for suggestions section...');
-    await page.waitForSelector('h2:has-text("More ideas for this board")', { timeout: 10000 });
+    await page.waitForSelector('h3:has-text("More ideas for this board")', { timeout: 10000 });
     console.log('Found suggestions section');
     await takeScreenshot(page, '3c-found-suggestions');
 
