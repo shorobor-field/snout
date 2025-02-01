@@ -9,22 +9,145 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const configPath = path.join(__dirname, '..', 'config.json');
 
-// Read config synchronously at startup
 const config = JSON.parse(readFileSync(configPath, 'utf8'));
+
+const CSS = `
+  body {
+    margin: 0;
+    padding: 20px;
+    background-color: #f8f8f8;
+    font-family: system-ui, -apple-system, sans-serif;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%' height='100%' filter='url(%23noiseFilter)' opacity='0.08'/%3E%3C/svg%3E");
+    opacity: 0.4;
+    pointer-events: none;
+  }
+
+  .corner-fold {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(225deg, transparent 50%, rgba(0,0,0,0.05) 50%);
+  }
+
+  .title {
+    font-family: "ITC Garamond Light", Georgia, serif;
+    font-size: 3.5em;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    font-weight: 300;
+    text-align: center;
+    color: #1a1a1a;
+    margin-bottom: 0.1em;
+  }
+
+  .divider {
+    text-align: center;
+    height: 20px;
+    margin: 20px 0;
+    position: relative;
+    border: none;
+  }
+
+  .divider::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 20%;
+    right: 20%;
+    height: 1px;
+    background: linear-gradient(to right, 
+      transparent, 
+      #ddd 10%, 
+      #ddd 45%, 
+      transparent 50%,
+      #ddd 55%,
+      #ddd 90%,
+      transparent
+    );
+  }
+
+  .divider::after {
+    content: "☕";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #f8f8f8;
+    padding: 0 20px;
+    color: #666;
+    font-size: 0.9em;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    padding: 20px;
+  }
+
+  .grid-item {
+    background: white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    overflow: hidden;
+  }
+
+  .image-container {
+    position: relative;
+    padding-top: 75%;
+    overflow: hidden;
+  }
+
+  .image-container img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .content {
+    padding: 12px;
+  }
+
+  .content h3 {
+    margin: 0 0 4px 0;
+    font-size: 16px;
+  }
+
+  .content p {
+    margin: 0;
+    font-size: 14px;
+    color: #666;
+  }
+
+  .footer {
+    text-align: center;
+    font-family: Georgia, serif;
+    color: #666;
+    margin-top: 20px;
+  }
+`;
 
 async function generateFeed(feedConfig) {
   const { id, title, description, boardId } = feedConfig;
   
   try {
-    // read scraped data
     const dataPath = path.join(__dirname, '..', 'data', `${id}.json`);
     const data = await fs.readFile(dataPath, 'utf-8');
-    console.log('Read data file:', dataPath);
-    
     const pins = JSON.parse(data);
-    console.log(`Parsed ${pins.length} pins from data`);
-    
-    // make feed
+
     const feed = new RSS({
       title: title || 'Pinterest Feed',
       description: description || 'Pinterest Board Feed',
@@ -33,37 +156,56 @@ async function generateFeed(feedConfig) {
       pubDate: new Date()
     });
 
-    // Create simple HTML content
     const feedHtml = `
-      <div style="font-family: system-ui, -apple-system, sans-serif;">
-        <h1>${title}</h1>
-        ${pins.map(pin => `
-          <div style="margin-bottom: 2rem;">
-            <img src="${pin.image}" style="max-width: 100%;">
-            <h3>${pin.title}</h3>
-            ${pin.description ? `<p>${pin.description}</p>` : ''}
-            <a href="${pin.url}">View on Pinterest</a>
-          </div>
-        `).join('')}
-      </div>
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>${CSS}</style>
+      </head>
+      <body>
+        <div class="corner-fold"></div>
+        
+        <h1 class="title">Snout Digest</h1>
+        <h2 style="text-align: center; font-family: Georgia, serif;">${title}</h2>
+        
+        <hr class="divider">
+        
+        <div class="grid">
+          ${pins.map(pin => `
+            <div class="grid-item">
+              <div class="image-container">
+                <img src="${pin.image}" alt="${pin.title}">
+              </div>
+              <div class="content">
+                <h3>${pin.title}</h3>
+                ${pin.description ? `<p>${pin.description}</p>` : ''}
+                <a href="${pin.url}" style="display: inline-block; margin-top: 8px; color: #666; text-decoration: none;">View on Pinterest →</a>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+        
+        <hr class="divider">
+        
+        <div class="footer">
+          Generated by Snout 🐕
+        </div>
+      </body>
+      </html>
     `;
 
-    // Add as a single feed item
     feed.item({
       title: `${title} - Latest Pins`,
       description: feedHtml,
       url: `https://pinterest.com/board/${boardId}`,
       guid: `${id}-${Date.now()}`,
-      date: new Date(),
-      author: 'Raiyan Rahman'
+      date: new Date()
     });
 
-    // ensure feeds dir exists
     const publicPath = path.join(__dirname, '..', 'public');
     const feedsPath = path.join(publicPath, 'feeds');
     await fs.mkdir(feedsPath, { recursive: true });
     
-    // save feed
     const feedPath = path.join(feedsPath, `${id}.xml`);
     await fs.writeFile(feedPath, feed.xml({indent: true}));
     console.log(`✨ generated feed at: ${feedPath}`);
@@ -76,49 +218,44 @@ async function generateFeed(feedConfig) {
 async function generateAllFeeds() {
   console.log('📡 generating all feeds...');
   
-  // generate each feed in config
   for (const feed of config.feeds) {
     await generateFeed(feed);
   }
   
-  // Create simple index page
+  // Create index page with same styling
   const indexHtml = `
     <!DOCTYPE html>
-    <html lang="en">
+    <html>
     <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>snout 🐕</title>
-      <style>
-        body {
-          font-family: system-ui, -apple-system, sans-serif;
-          max-width: 800px;
-          margin: 2rem auto;
-          padding: 0 1rem;
-        }
-        .feed {
-          border: 1px solid #eee;
-          padding: 1rem;
-          margin: 1rem 0;
-          border-radius: 8px;
-        }
-      </style>
+      <style>${CSS}</style>
     </head>
     <body>
-      <h1>🐕 snout</h1>
-      <p>Pinterest RSS feeds</p>
+      <div class="corner-fold"></div>
       
-      ${config.feeds.map(feed => `
-        <div class="feed">
-          <h2>${feed.title}</h2>
-          ${feed.description ? `<p>${feed.description}</p>` : ''}
-          <a href="./feeds/${feed.id}.xml">Subscribe to RSS feed</a>
-        </div>
-      `).join('')}
+      <h1 class="title">🐕 snout</h1>
+      <h2 style="text-align: center; font-family: Georgia, serif;">Pinterest RSS feeds</h2>
+      
+      <hr class="divider">
+      
+      <div class="grid">
+        ${config.feeds.map(feed => `
+          <div class="grid-item">
+            <div class="content">
+              <h3>${feed.title}</h3>
+              ${feed.description ? `<p>${feed.description}</p>` : ''}
+              <a href="./feeds/${feed.id}.xml" style="display: inline-block; margin-top: 8px; color: #666; text-decoration: none;">
+                Subscribe to RSS feed →
+              </a>
+            </div>
+          </div>
+        `).join('')}
+      </div>
 
-      <footer style="margin-top: 2rem; color: #666;">
-        <p>Last updated: ${new Date().toLocaleString()}</p>
-      </footer>
+      <hr class="divider">
+      
+      <div class="footer">
+        Last updated: ${new Date().toLocaleString()}
+      </div>
     </body>
     </html>
   `;
