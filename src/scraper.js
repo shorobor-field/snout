@@ -117,31 +117,23 @@ async function scrapePinterestBoard(boardId) {
     // Wait for any image to appear
     await page.waitForSelector('img', { timeout: 10000 });
     
-    // Wait for the "More ideas" section to appear
-    console.log('Waiting for suggestions section...');
-    await page.waitForSelector('h3:has-text("More ideas for this board")', { timeout: 10000 });
-    console.log('Found suggestions section');
-    await takeScreenshot(page, '3c-found-suggestions');
+    // Wait for some content to load
+    console.log('Waiting for pins to load...');
+    await page.waitForTimeout(3000);
+    await takeScreenshot(page, '3b-after-wait');
 
-    // Get pins from the suggestions section
+    // Get pins with save buttons
     const pins = await page.evaluate(() => {
-      // Find the "More ideas" heading
-      const heading = Array.from(document.querySelectorAll('h2'))
-        .find(h2 => h2.textContent.includes('More ideas for this board'));
+      // Find all save buttons
+      const saveButtons = Array.from(document.querySelectorAll('svg[aria-label="Save"]'));
       
-      if (!heading) return [];
-      
-      // Get all pin containers that come after this heading
-      const pinContainers = Array.from(heading.parentElement.querySelectorAll('div'))
-        .filter(div => {
-          const hasImage = div.querySelector('img');
-          const hasLink = div.querySelector('a[href*="/pin/"]');
-          const rect = div.getBoundingClientRect();
-          return hasImage && hasLink && rect.width > 200 && rect.height > 200;
-        })
-        .slice(0, 20); // Take only first 20
+      // Get their parent pin containers
+      const pinContainers = saveButtons
+        .map(btn => btn.closest('div[role="button"]')?.parentElement?.parentElement)
+        .filter(Boolean) // Remove nulls
+        .slice(0, 20);  // Take first 20
 
-      console.log(`Found ${pinContainers.length} suggested pins`);
+      console.log(`Found ${pinContainers.length} pins with save buttons`);
 
       return pinContainers.map(div => {
         const img = div.querySelector('img');
@@ -163,7 +155,8 @@ async function scrapePinterestBoard(boardId) {
       }).filter(pin => pin.url && pin.image);
     });
 
-    console.log(`Found ${pins.length} unique pins after filtering`);
+    console.log(`Found ${pins.length} unique pins with save buttons`);
+    await takeScreenshot(page, '3c-after-finding-pins');
     return pins;
 
     return pins;
