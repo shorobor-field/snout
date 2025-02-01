@@ -20,20 +20,25 @@ async function writeConfig(config) {
 
 export async function addFeed(req, res) {
   try {
-    const { id, title, description, boardId } = req.body;
+    const { id, title, description, boardUrl } = req.body;
 
-    if (!id || !title || !boardId) {
+    if (!id || !title || !boardUrl) {
       return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    // validate pinterest url format
+    const urlPattern = /^https?:\/\/(www\.)?pinterest\.[a-z]+\/[^\/]+\/[^\/]+\/?$/;
+    if (!urlPattern.test(boardUrl)) {
+      return res.status(400).json({ error: 'Invalid Pinterest board URL format' });
     }
 
     const config = await readConfig();
     
-    // Check for duplicate ID
     if (config.feeds.some(feed => feed.id === id)) {
       return res.status(400).json({ error: 'Feed ID already exists' });
     }
 
-    config.feeds.push({ id, title, description, boardId });
+    config.feeds.push({ id, title, description, boardUrl });
     await writeConfig(config);
 
     res.status(200).json({ message: 'Feed added successfully' });

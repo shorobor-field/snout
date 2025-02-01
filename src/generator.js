@@ -41,7 +41,7 @@ function cleanContent(pin) {
 }
 
 async function generateFeed(feedConfig) {
-  const { id, title, description, boardId } = feedConfig;
+  const { id, title, description, boardUrl } = feedConfig;
   
   try {
     const dataPath = path.join(__dirname, '..', 'data', `${id}.json`);
@@ -52,7 +52,7 @@ async function generateFeed(feedConfig) {
       title: `Snout Digest: ${title}`,
       description: description || 'Pinterest Board Feed',
       feed_url: `https://shorobor-field.github.io/snout/feeds/${id}.xml`,
-      site_url: "https://pinterest.com",
+      site_url: boardUrl,
       pubDate: new Date(),
       image_url: `https://shorobor-field.github.io/snout/images/logo.png`,
     });
@@ -100,7 +100,7 @@ async function generateFeed(feedConfig) {
     feed.item({
       title: `Snout Digest: ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`,
       description: feedHtml,
-      url: `https://pinterest.com/board/${boardId}`,
+      url: boardUrl,
       guid: `${id}-${Date.now()}`,
       date: new Date()
     });
