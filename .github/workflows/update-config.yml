@@ -1,0 +1,27 @@
+name: Update Config
+
+on:
+  repository_dispatch:
+    types: [update-config]
+
+permissions:
+  contents: write
+
+jobs:
+  update-config:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.client_payload.secret == secrets.CONFIG_UPDATE_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Update config
+        run: |
+          echo '${{ github.event.client_payload.config }}' > config.json
+          
+      - name: Commit changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add config.json
+          git commit -m "Update config.json via UI"
+          git push
