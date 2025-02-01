@@ -1,4 +1,4 @@
-// test-rss.js
+// preview-test.js
 import RSS from 'rss';
 import fs from 'fs/promises';
 import path from 'path';
@@ -6,124 +6,92 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const TEST_SECTIONS = [
-  {
-    title: "1. Basic HTML",
-    html: `
-      <h1>Basic HTML Test</h1>
-      <p>Regular paragraph</p>
-      <b>Bold text</b>
-      <i>Italic text</i>
-      <a href="https://example.com">Link</a>
-      <br>
-      <hr>
-    `
-  },
-  {
-    title: "2. Tables",
-    html: `
-      <table border="1">
-        <tr>
-          <td>Table cell 1</td>
-          <td>Table cell 2</td>
-        </tr>
-      </table>
-    `
-  },
-  {
-    title: "3. Images",
-    html: `
-      <img src="https://placekitten.com/200/200" alt="Test image">
-      <figure>
-        <img src="https://placekitten.com/201/201" alt="Test figure image">
-        <figcaption>Image caption</figcaption>
-      </figure>
-    `
-  },
-  {
-    title: "4. Basic inline CSS",
-    html: `
-      <p style="color: blue;">Blue text</p>
-      <p style="font-size: 20px;">Large text</p>
-      <p style="font-family: Arial;">Arial font</p>
-      <div style="padding: 10px; margin: 10px;">Padded and margined div</div>
-    `
-  },
-  {
-    title: "5. CSS classes with style tag",
-    html: `
-      <style>
-        .test-class { color: red; }
-        .box { padding: 10px; background: #eee; }
-      </style>
-      <p class="test-class">Red text via class</p>
-      <div class="box">Box with background</div>
-    `
-  },
-  {
-    title: "6. Flexbox layout",
-    html: `
-      <div style="display: flex; gap: 10px;">
-        <div style="flex: 1;">Flex item 1</div>
-        <div style="flex: 1;">Flex item 2</div>
-      </div>
-    `
-  },
-  {
-    title: "7. Grid layout",
-    html: `
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-        <div>Grid item 1</div>
-        <div>Grid item 2</div>
-      </div>
-    `
-  }
-  // ... other test sections same as before ...
-];
-
-async function generateTestFeed() {
+async function generatePreviewFeed() {
   const feed = new RSS({
-    title: "RSS Compatibility Test Feed",
-    description: "Testing what HTML/CSS features work in RSS readers",
-    feed_url: "http://example.com/rss.xml",
-    site_url: "http://example.com",
+    title: "RSS Preview Test",
+    description: "Testing elegant mobile-friendly layout",
+    feed_url: "https://shorobor-field.github.io/snout/feeds/preview.xml",
+    site_url: "https://pinterest.com",
     pubDate: new Date()
   });
 
-  // Create combined test item
-  const combinedHtml = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-    </head>
-    <body>
-      <h1>RSS Compatibility Test</h1>
-      <p>Testing various HTML and CSS features. Each section tests different features.</p>
-      <hr>
-      ${TEST_SECTIONS.map(section => `
-        <div style="margin: 20px 0;">
-          <h2>${section.title}</h2>
-          ${section.html}
-          <hr>
-        </div>
-      `).join('')}
-    </body>
-    </html>
+  // Mock pins data  
+  const pins = [
+    {
+      title: "Modern Minimalist Living Room",
+      description: "Clean lines and natural light create a peaceful sanctuary",
+      image: "https://placekitten.com/800/600", 
+      url: "https://pinterest.com/pin/1"
+    },
+    {
+      title: "Japanese-Inspired Garden",
+      description: "Zen garden with carefully placed stones and manicured plants",
+      image: "https://placekitten.com/801/600",
+      url: "https://pinterest.com/pin/2"
+    },
+    {
+      title: "Contemporary Kitchen Design",
+      description: "Sleek fixtures and marble countertops define this space",
+      image: "https://placekitten.com/802/600",
+      url: "https://pinterest.com/pin/3"
+    }
+  ];
+
+  const previewHtml = `
+    <!-- Try loading custom font -->
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300&display=swap" rel="stylesheet">
+
+    <div style="max-width: 800px; margin: 0 auto; padding: 20px; font-family: Georgia, serif;">
+      <!-- Header -->
+      <div style="text-align: center; margin-bottom: 40px;">
+        <h1 style="font-family: 'Cormorant Garamond', Georgia, serif; font-size: 3em; color: #1a1a1a; margin: 0; font-weight: 300;">Snout Digest</h1>
+        <h2 style="font-weight: normal; color: #666; margin: 10px 0;">Pinterest Vibes: Architecture & Design</h2>
+      </div>
+
+      <!-- Divider -->
+      <div style="text-align: center; margin: 30px 0;">
+        <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
+      </div>
+
+      <!-- Grid using flexbox -->
+      <div style="display: flex; flex-wrap: wrap; gap: 20px; justify-content: center;">
+        ${pins.map(pin => `
+          <div style="flex: 1 1 300px; max-width: 400px; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            <div style="position: relative; padding-top: 75%; overflow: hidden;">
+              <img src="${pin.image}" alt="${pin.title}" 
+                   style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;">
+            </div>
+            <div style="padding: 16px;">
+              <h3 style="margin: 0 0 8px 0; font-size: 18px; color: #1a1a1a;">${pin.title}</h3>
+              <p style="margin: 0 0 12px 0; color: #666; font-size: 14px;">${pin.description}</p>
+              <a href="${pin.url}" style="color: #666; text-decoration: none; font-size: 14px;">
+                View ↗️
+              </a>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+
+      <!-- Footer -->
+      <div style="text-align: center; margin-top: 40px; color: #666;">
+        <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
+        <p>🐕 woof woof!</p>
+      </div>
+    </div>
   `;
 
   feed.item({
-    title: "HTML/CSS Compatibility Test",
-    description: combinedHtml,
-    url: "http://example.com/test",
-    guid: "test-" + Date.now(),
+    title: "Design Inspiration - Latest Pins",
+    description: previewHtml,
+    url: "https://pinterest.com/board/test",
+    guid: "preview-" + Date.now(),
     date: new Date()
   });
 
-  // Save to test-feed.xml in current directory
-  const outputPath = path.join(__dirname, 'test-feed.xml');
+  const outputPath = path.join(__dirname, '..', 'public', 'feeds', 'preview.xml');
+  await fs.mkdir(path.join(__dirname, '..', 'public', 'feeds'), { recursive: true });
   await fs.writeFile(outputPath, feed.xml({ indent: true }));
-  console.log('✨ Generated test feed at:', outputPath);
+  console.log('✨ Generated preview feed at:', outputPath);
 }
 
-generateTestFeed();
+generatePreviewFeed();
