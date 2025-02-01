@@ -118,7 +118,7 @@ async function generateFeed(userId, feedConfig) {
 async function shouldGenerateFeed(schedule) {
   if (!schedule || schedule.includes('daily')) return true;
 
-  const today = new Date().toLocaleLowerCase('en-us', { weekday: 'long' });
+  const today = new Date().toLocaleString('en-us', { weekday: 'long' }).toLowerCase();
   return schedule.some(day => day.toLowerCase() === today.toLowerCase());
 }
 
