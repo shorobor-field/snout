@@ -9,10 +9,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const configPath = path.join(__dirname, '..', 'config.json');
 
-// Read config and logo
+// Read config
 const config = JSON.parse(readFileSync(configPath, 'utf8'));
-const logo = readFileSync(path.join(__dirname, '..', 'logo.svg'), 'base64');
-const logoUrl = `data:image/svg+xml;base64,${logo}`;
 
 function cleanContent(pin) {
   let title = pin.title;
@@ -51,11 +49,12 @@ async function generateFeed(feedConfig) {
     const pins = JSON.parse(data);
     
     const feed = new RSS({
-      title: title,
+      title: `Snout Digest: ${title}`,
       description: description || 'Pinterest Board Feed',
       feed_url: `https://shorobor-field.github.io/snout/feeds/${id}.xml`,
       site_url: "https://pinterest.com",
-      pubDate: new Date()
+      pubDate: new Date(),
+      image_url: `https://shorobor-field.github.io/snout/images/logo.png`,
     });
 
     const feedHtml = `
@@ -63,7 +62,6 @@ async function generateFeed(feedConfig) {
 
       <div style="max-width: 800px; margin: 0 auto; padding: 20px; font-family: Georgia, serif;">
         <div style="text-align: center; margin-bottom: 40px;">
-          <img src="${logoUrl}" alt="Logo" style="width: 60px; height: 60px; margin-bottom: 20px;">
           <h1 style="font-family: 'Cormorant Garamond', Georgia, serif; font-size: 3em; color: #1a1a1a; margin: 0; font-weight: 300;">${title}</h1>
           ${description ? `<h2 style="font-weight: normal; color: #666; margin: 10px 0;">${description}</h2>` : ''}
         </div>
@@ -100,7 +98,7 @@ async function generateFeed(feedConfig) {
     `;
 
     feed.item({
-      title: "Latest Pins", // simplified title
+      title: `Snout Digest: ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`,
       description: feedHtml,
       url: `https://pinterest.com/board/${boardId}`,
       guid: `${id}-${Date.now()}`,
