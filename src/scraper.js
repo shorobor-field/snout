@@ -3,41 +3,15 @@ import { chromium } from 'playwright';
 import fs from 'fs/promises';
 import config from '../config.json' assert { type: 'json' };
 
-const PINTEREST_SESSION = process.env.PINTEREST_SESSION;
+// ... rest of the imports and helper functions ...
 
-async function ensureLogin(page) {
-  try {
-    await page.goto('https://pinterest.com', { timeout: 60000 });
-    await page.context().addCookies([{
-      name: '_pinterest_sess',
-      value: PINTEREST_SESSION,
-      domain: '.pinterest.com',
-      path: '/'
-    }]);
-
-    await page.reload();
-    await page.waitForSelector('[data-test-id="header-avatar"], [data-test-id="homefeed-feed"]', {
-      timeout: 20000
-    });
-    
-    return true;
-  } catch (error) {
-    console.error('❌ Cookie auth failed:', error.message);
-    return false;
-  }
-}
-
-async function verifyImageUrl(page, url) {
-  if (!url) return false;
-  try {
-    const response = await page.evaluate(async (url) => {
-      const res = await fetch(url, { method: 'HEAD' });
-      return res.ok;
-    }, url);
-    return response;
-  } catch {
-    return false;
-  }
+async function takeDebugScreenshot(page, name) {
+  const screenshotsDir = './debug-screenshots';
+  await fs.mkdir(screenshotsDir, { recursive: true });
+  await page.screenshot({ 
+    path: `${screenshotsDir}/${Date.now()}-${name}.png`,
+    fullPage: true 
+  });
 }
 
 async function scrapePinterestBoard(boardUrl) {
@@ -63,14 +37,20 @@ async function scrapePinterestBoard(boardUrl) {
     const page = await context.newPage();
 
     if (!await ensureLogin(page)) {
+      await takeDebugScreenshot(page, 'login-failed');
       throw new Error('Login failed');
     }
+    
+    await takeDebugScreenshot(page, 'post-login');
 
+    // Just go directly to the board URL
     await page.goto(boardUrl, { timeout: 60000 });
     await page.waitForTimeout(3000);
+    await takeDebugScreenshot(page, 'pre-scrape');
     await page.waitForSelector('img', { timeout: 10000 });
     await page.waitForTimeout(3000);
 
+    // Rest of the scraping logic remains the same
     let pins = await page.evaluate(() => {
       const saveButtons = Array.from(document.querySelectorAll('svg[aria-label="Save"]'));
       return saveButtons.map(btn => {
@@ -105,6 +85,7 @@ async function scrapePinterestBoard(boardUrl) {
 
   } catch (error) {
     console.error(`Failed scraping board ${boardUrl}:`, error);
+    await takeDebugScreenshot(page, 'error-state');
     return [];
   } finally {
     await browser.close();
