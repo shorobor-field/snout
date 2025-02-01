@@ -9,11 +9,12 @@
           "title": "garphec vibes",
           "description": "auraphd dsingest suggestions",
           "boardUrl": "https://www.pinterest.com/raiyanrahmanxx/fashion/"
+          "schedule": ["monday", "thursday"] // case insensitive
         }
       ]
     },
     {
-      "id": "user2",
+      "id": "zarin",
       "pinterest_session": "TWc9PSZNV0o1REFpVzVBTnJDN3R1S21PcFRDRXhVKzBubmhQN1U5NDMxYUlsckVVRy9EQU9lT3dpb0hXK3YvR01nNlExUk5Dd3NQVlZTM1FBZEp0cDhCZmFMS0Q5U1ozVm1NZFZYYk5PdmVoeWtrTExaTFpkR3lRR2EzNFpFejcvQlcrWGxUYk9KSWd4VytZTzJsWlVKaGlkUWp2b0hPTzRyTEZudTYvbzRyakJLVW52YmxnOURGTEZOY0w1L1R5K3JOV1VNS2NQQUZ5eEhSb1hiU0J2V1dReVJmaGNNanFCcDdrUkdHM1EwOCtZMzdhNGtpMnRVeE83UXl4YXI0U25UNWZzMFowYy9pYm9nSit5clR5ZzB0cUxOaGlGZ3JpbnlTQWh6S1ArYS9ESFo5Z1QxNitzdTVrTHlRMDJUOE43b1luS3B2alFCcDljcUFiSU0yZFdrY3B0R0R2K245akt3SURLcHk5TmlYUFJrVWkwVWlZRDkxUzNLQWRiV2RTTVVYMThFWVBQdTQvZkJvWlBtTFZxUnl5V2Zkb0wwcWxCWXQ5OGM5TEM4ZzRIcHZ0K3p2aTlGRW15aUpnSHpMMGtlNmFOWFM0eWNueGJvb0hsNlBxbUdHc1JVQklORkRaZFdYTi9GbW8vK1NwdHBEc01kNzd4Ry9QemhqKzhFYlVvTm9JNnBBWHZhQXUyWWs1UmN2U0lTTEwza1A1WW1PY1BmMDEwTjNlMjU1VDJSeHNMYjVYL2ZXNzBqTFJERkpubk1zc0xqQldmTWs4SjNQUjhwbDY1Q2cvTFFoVFpHaVh4dFBvQTlKT3NoRHBhUEJLY1p0MmhJTDZQVVh0TG9iSFMzZHdjVGFUZFBWd0FhUnM3UngwVGQzNWFPUHY5UUIrbm1haHREc3gvVXlmQVZEUDkreXZmKzRyajVJck9MR0tWR2w3OGptRFdLTFJKUzNMeS9HK2o1NytDUG5LY3NvQndLTjBEc1AwaFp4dTlkMkZZNFQ2eDFCc2tYWDI5S0x0Zk1rN2k4aDUzWitsRUpFU0pGU0RHM1M1bWZiN05lM3gzcTlwVlJMbUVNQ3BSY3h0d0JSdmtvdTIxWXNnVytPcUFmaVNRS3Z1VnF5MFBLYlNrZ2xPN25tVDhOL0xNME42Yk0xVzBHdFVpaTVBamlYNXdpTzVqU29SbXJ1aHpPUmtTOVplWlRCN3dWT1FqelBXUkZpRGE3YU95cFp0b1VNY1JXdEFGc3AyejgrSUJkR280NzFubTYrWm9LaE1vYmlSY0pWVnpYY3lUcGtTL1ROa3VFbUhudWo5ZHlEVmp2N280MW1zNy9Nb25WTnZvNUR4VGwyVVZ3Tm1leUVEOW9uZkxEU1hvOTBBM2tndjFiR2lGem9IQmNUSkZhUUFsQWIwbzRqdnVUN0lCSFA5cWxOcDZCbFV6UTAwT05xSjdUb1JQMyt1OVFodTJXYkd4MjhLYll1b2xuUlB3TnoxSFMyM2IrUWZMUVlWTzhtUEpvam9OSm1WTThpdEM1RmE1SHBSZmpmdVN0UStOa2tyWTJjbWZoQWh2eW13UTZlWkFuc2NISHhOTk1wVjVNZUIyS0RwZXFlSGRZUmNBM05RMVZWcm5vUCsyNWVRTjNQV3ZSSVBTaUF5bW9XZFZSbkUwMHBJVkFHblBsUVRsWm9kak5vTS9SdjhyQlhXWVZGY0dEYk9HZDRhdHZ4SlZodnpxdnFXUzIrSnJXc25Sc0pacldIUmo1VTVKZWNubHZiZTk0T3VkVzhUMTVZa1lhL05VTTd4UGNyN0YmaE8yWEE0TEY0Q2llZkQ5QzJzOVlOQW9rV29RPQ==",
       "feeds": [
         {
@@ -21,6 +22,7 @@
           "title": "aesthetic board",
           "description": "daily inspo",
           "boardUrl": "https://www.pinterest.com/zarintasnim0810/architecture/"
+          "schedule": ["daily"] // special keyword for every day
         }
       ]
     }

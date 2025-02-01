@@ -115,11 +115,23 @@ async function generateFeed(userId, feedConfig) {
   }
 }
 
+async function shouldGenerateFeed(schedule) {
+  if (!schedule || schedule.includes('daily')) return true;
+
+  const today = new Date().toLocaleLowerCase('en-us', { weekday: 'long' });
+  return schedule.some(day => day.toLowerCase() === today.toLowerCase());
+}
+
 async function generateUserFeeds(user) {
   console.log(`\n📡 generating feeds for user ${user.id}...`);
   
   for (const feed of user.feeds) {
-    await generateFeed(user.id, feed);
+    if (await shouldGenerateFeed(feed.schedule)) {
+      console.log(`generating ${feed.id} (scheduled for ${feed.schedule?.join(', ')})`);
+      await generateFeed(user.id, feed);
+    } else {
+      console.log(`skipping ${feed.id} (not scheduled for today)`);
+    }
   }
 }
 
@@ -157,6 +169,9 @@ async function generateAllFeeds() {
                 <div style="flex: 1 1 300px; max-width: 400px; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 16px;">
                   <h4 style="margin: 0 0 8px 0; font-size: 18px; color: #1a1a1a;">${feed.title}</h4>
                   ${feed.description ? `<p style="margin: 0 0 12px 0; color: #666; font-size: 14px;">${feed.description}</p>` : ''}
+                  ${feed.schedule ? `<p style="margin: 0 0 12px 0; color: #666; font-size: 14px; font-style: italic;">
+                    Updates: ${feed.schedule.includes('daily') ? 'Daily' : feed.schedule.map(d => d.charAt(0).toUpperCase() + d.slice(1)).join(', ')}
+                  </p>` : ''}
                   <a href="./feeds/${user.id}/${feed.id}.xml" style="color: #666; text-decoration: none; font-size: 14px;">
                     Subscribe ↗
                   </a>
