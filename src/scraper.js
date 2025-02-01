@@ -9,24 +9,46 @@ import config from '../config.json' assert { type: 'json' };
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+async function getUserSession(userId) {
+  const envVar = `PINTEREST_SESSION_${userId.toUpperCase()}`;
+  
+  console.log('===== Precise Session Retrieval =====');
+  
+  // Directly log the raw environment variable value
+  const rawSessionValue = process.env[envVar];
+  
+  console.log('Raw environment variable value:');
+  console.log('- Exact raw value:', JSON.stringify(rawSessionValue));
+  console.log('- typeof:', typeof rawSessionValue);
+  console.log('- JSON.stringify representation:', 
+    rawSessionValue ? JSON.stringify(rawSessionValue) : 'UNDEFINED'
+  );
+  
+  if (!rawSessionValue) {
+    throw new Error(`No Pinterest session found for user ${userId} (missing ${envVar})`);
+  }
+  
+  return rawSessionValue;
+}
+
 async function ensureLogin(page, sessionCookie) {
   try {
-    console.log('Login process starting...');
-    console.log('Raw session cookie input:', sessionCookie);
+    console.log('===== Precise Login Attempt =====');
+    console.log('Raw session cookie input (EXACT):');
+    console.log(JSON.stringify(sessionCookie));
     console.log('Session cookie type:', typeof sessionCookie);
-    console.log('Session cookie length:', sessionCookie ? sessionCookie.length : 'N/A');
-
+    
     // Validate session cookie
-    if (!sessionCookie || typeof sessionCookie !== 'string' || sessionCookie.trim() === '') {
-      throw new Error('Session cookie is empty or invalid');
+    if (!sessionCookie || typeof sessionCookie !== 'string') {
+      throw new Error('Session cookie is not a string');
     }
 
     await page.goto('https://pinterest.com', { timeout: 60000 });
     
-    // Detailed cookie logging and modification
+    // Use the EXACT session cookie without any modifications
     const cookieToAdd = {
       name: '_pinterest_sess',
-      value: sessionCookie.trim(), // Trim to remove any whitespace
+      value: sessionCookie, // NO TRIMMING, NO MODIFICATIONS
       domain: '.pinterest.com',
       path: '/'
     };
@@ -158,80 +180,6 @@ async function scrapePinterestBoard(page, boardUrl) {
   }
 }
 
-async function getUserSession(userId) {
-  const envVar = `PINTEREST_SESSION_${userId.toUpperCase()}`;
-  
-  console.log('===== Precise Session Retrieval =====');
-  
-  // Directly log the raw environment variable value
-  const rawSessionValue = process.env[envVar];
-  
-  console.log('Raw environment variable value:');
-  console.log('- Exact raw value:', JSON.stringify(rawSessionValue));
-  console.log('- typeof:', typeof rawSessionValue);
-  console.log('- JSON.stringify representation:', 
-    rawSessionValue ? JSON.stringify(rawSessionValue) : 'UNDEFINED'
-  );
-  
-  if (!rawSessionValue) {
-    throw new Error(`No Pinterest session found for user ${userId} (missing ${envVar})`);
-  }
-  
-  return rawSessionValue;
-}
-
-async function ensureLogin(page, sessionCookie) {
-  try {
-    console.log('===== Precise Login Attempt =====');
-    console.log('Raw session cookie input (EXACT):');
-    console.log(JSON.stringify(sessionCookie));
-    console.log('Session cookie type:', typeof sessionCookie);
-    
-    // Validate session cookie
-    if (!sessionCookie || typeof sessionCookie !== 'string') {
-      throw new Error('Session cookie is not a string');
-    }
-
-    await page.goto('https://pinterest.com', { timeout: 60000 });
-    
-    // Use the EXACT session cookie without any modifications
-    const cookieToAdd = {
-      name: '_pinterest_sess',
-      value: sessionCookie, // NO TRIMMING, NO MODIFICATIONS
-      domain: '.pinterest.com',
-      path: '/'
-    };
-
-    console.log('Prepared cookie for addition:', {
-      name: cookieToAdd.name,
-      value: cookieToAdd.value ? `${cookieToAdd.value.slice(0, 10)}...` : 'EMPTY',
-      domain: cookieToAdd.domain,
-      path: cookieToAdd.path
-    });
-
-    await page.context().addCookies([cookieToAdd]);
-
-    console.log('Cookies added, reloading page...');
-    await page.reload();
-
-    console.log('Waiting for login selectors...');
-    await page.waitForSelector('[data-test-id="header-avatar"], [data-test-id="homefeed-feed"]', {
-      timeout: 20000
-    });
-    
-    console.log('✅ Login successful!');
-    return true;
-  } catch (error) {
-    console.error('❌ Cookie auth failed:', error.message);
-    console.error('Full error details:', error);
-    return false;
-  }
-}
-
-export { getUserSession, ensureLogin };
-
-export default getUserSession;
-
 async function scrapeUserBoards(user) {
   console.log(`\n🚀 Starting scrape for user: ${user.id}`);
   
@@ -258,7 +206,7 @@ async function scrapeUserBoards(user) {
     
     const page = await context.newPage();
 
-    if (!await ensureLogin(page, user.pinterest_session)) {
+    if (!await ensureLogin(page, session)) {
       throw new Error(`Login failed for user ${user.id}`);
     }
 
@@ -304,4 +252,8 @@ async function scrapeAllUsers() {
 
 // Clean up old debug screenshots if they exist
 fs.rm('./debug-screenshots', { recursive: true, force: true })
-  .then(() => scrapeAllUsers());
+  .then(() => scrapeAllUsers())
+  .catch(error => {
+    console.error('Error during scraping process:', error);
+    process.exit(1);
+  });
