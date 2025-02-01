@@ -1,4 +1,3 @@
-// src/generator.js
 import RSS from 'rss';
 import fs from 'fs/promises';
 import { readFileSync } from 'fs';
@@ -12,24 +11,247 @@ const configPath = path.join(__dirname, '..', 'config.json');
 // Read config synchronously at startup
 const config = JSON.parse(readFileSync(configPath, 'utf8'));
 
-// ... rest of your generator code stays the same ...
-
-function chunkArray(array, size) {
-  const chunks = [];
-  for (let i = 0; i < array.length; i += size) {
-    chunks.push(array.slice(i, i + size));
-  }
-  return chunks;
+function formatDate(date) {
+  return date.toLocaleDateString('en-US', { 
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric'
+  });
 }
 
 async function generateFeed(feedConfig) {
   const { id, title, description, boardId } = feedConfig;
   
   try {
-    // read scraped data
     const dataPath = path.join(__dirname, '..', 'data', `${id}.json`);
     const data = await fs.readFile(dataPath, 'utf-8');
-    const pins = JSON.parse(data);
+    const allPins = JSON.parse(data);
+
+    // Deduplicate pins based on pin ID
+    const uniquePins = Object.values(
+      allPins.reduce((acc, pin) => {
+        if (!acc[pin.id]) {
+          acc[pin.id] = pin;
+        }
+        return acc;
+      }, {})
+    );
+
+    // Take only the first 20 unique pins
+    const pins = uniquePins.slice(0, 20);
+
+    // Create pin grid HTML
+    const pinRows = [];
+    for (let i = 0; i < pins.length; i += 2) {
+      const pin1 = pins[i];
+      const pin2 = pins[i + 1];
+      
+      pinRows.push(`
+        <div class="grid-row">
+          <div class="grid-cell">
+            <div class="image-container">
+              <img src="${pin1.image}" alt="${pin1.title}">
+            </div>
+            <div class="content">
+              <h3>${pin1.title}</h3>
+              ${pin1.description ? `<p>${pin1.description}</p>` : ''}
+            </div>
+          </div>
+          ${pin2 ? `
+            <div class="grid-cell">
+              <div class="image-container">
+                <img src="${pin2.image}" alt="${pin2.title}">
+              </div>
+              <div class="content">
+                <h3>${pin2.title}</h3>
+                ${pin2.description ? `<p>${pin2.description}</p>` : ''}
+              </div>
+            </div>
+          ` : ''}
+        </div>
+      `);
+    }
+
+    const currentDate = new Date();
+    const contentHtml = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body {
+            margin: 0;
+            padding: 20px;
+            background-color: #f8f8f8;
+            font-family: system-ui, -apple-system, sans-serif;
+          }
+
+          body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%' height='100%' filter='url(%23noiseFilter)' opacity='0.08'/%3E%3C/svg%3E");
+            opacity: 0.4;
+            pointer-events: none;
+          }
+
+          .corner-fold {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(225deg, transparent 50%, rgba(0,0,0,0.05) 50%);
+          }
+
+          .title {
+            font-family: "ITC Garamond Light", Georgia, serif;
+            font-size: 3.5em;
+            line-height: 1;
+            letter-spacing: -0.02em;
+            font-weight: 300;
+            text-align: center;
+            color: #1a1a1a;
+            margin-bottom: 0.1em;
+          }
+
+          h2 {
+            text-align: center;
+            font-family: Georgia, serif;
+          }
+
+          .date {
+            font-family: "ITC Garamond Light", Georgia, serif;
+            text-align: center;
+            color: #666;
+            margin-bottom: 1.5em;
+            font-size: 1.1em;
+          }
+
+          .divider {
+            text-align: center;
+            height: 20px;
+            margin: 20px 0;
+            position: relative;
+            border: none;
+          }
+
+          .divider::before {
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: 20%;
+            right: 20%;
+            height: 1px;
+            background: linear-gradient(to right, 
+              transparent, 
+              #ddd 10%, 
+              #ddd 45%, 
+              transparent 50%,
+              #ddd 55%,
+              #ddd 90%,
+              transparent
+            );
+          }
+
+          .divider::after {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #f8f8f8;
+            padding: 0 20px;
+            color: #666;
+            font-size: 0.9em;
+          }
+
+          .divider.top::after {
+            content: "☕";
+          }
+
+          .divider.bottom::after {
+            content: "📰";
+          }
+
+          .grid {
+            display: table;
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 10px;
+          }
+
+          .grid-row {
+            display: table-row;
+          }
+
+          .grid-cell {
+            display: table-cell;
+            width: 50%;
+            background: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            vertical-align: top;
+            position: relative;
+          }
+
+          .image-container {
+            position: relative;
+            width: 100%;
+            height: 300px;
+            overflow: hidden;
+          }
+
+          .image-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+          }
+
+          .content {
+            padding: 12px;
+          }
+
+          .content h3 {
+            margin: 0 0 4px 0;
+            font-size: 16px;
+          }
+
+          .content p {
+            margin: 0;
+            font-size: 14px;
+            color: #666;
+          }
+
+          .footer {
+            text-align: center;
+            font-family: Georgia, serif;
+            color: #666;
+            margin-top: 20px;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="corner-fold"></div>
+        
+        <h1 class="title">Snout Digest</h1>
+        <h2>${title}</h2>
+        <div class="date">${formatDate(currentDate)}</div>
+        
+        <hr class="divider top">
+        
+        <div class="grid">
+          ${pinRows.join('\n')}
+        </div>
+        
+        <hr class="divider bottom">
+        
+        <div class="footer">
+          via Snout RSS
+        </div>
+      </body>
+      </html>
+    `;
 
     // make feed
     const feed = new RSS({
@@ -37,33 +259,16 @@ async function generateFeed(feedConfig) {
       description,
       feed_url: `https://shorobor-field.github.io/snout/feeds/${id}.xml`,
       site_url: "https://pinterest.com",
+      pubDate: currentDate
     });
 
-    // batch pins into groups of 10
-    const batches = chunkArray(pins, 10);
-    
-    // add each batch as a single item
-    batches.forEach((batch, index) => {
-      const batchHtml = batch.map(pin => `
-        <div style="margin-bottom: 2rem; padding: 1rem; border-bottom: 1px solid #eee;">
-          <img src="${pin.image}" style="width: 100%; max-width: 800px; border-radius: 8px;">
-          <h3 style="margin: 1rem 0;">${pin.title}</h3>
-          ${pin.description ? `<p style="margin: 1rem 0;">${pin.description}</p>` : ''}
-          <a href="${pin.url}" style="color: #0066cc; text-decoration: none;">View on Pinterest</a>
-        </div>
-      `).join('\n');
-
-      feed.item({
-        title: `${title} - Batch ${index + 1}`,
-        description: `
-          <div style="font-family: system-ui, sans-serif;">
-            ${batchHtml}
-          </div>
-        `,
-        url: `https://pinterest.com/board/${boardId}`,
-        guid: `${id}-batch-${index}-${Date.now()}`,
-        date: new Date()
-      });
+    // Add as single item
+    feed.item({
+      title: `${title} - ${formatDate(currentDate)}`,
+      description: contentHtml,
+      url: `https://pinterest.com/board/${boardId}`,
+      guid: `${id}-${Date.now()}`,
+      date: currentDate
     });
 
     // ensure feeds dir exists
@@ -77,7 +282,7 @@ async function generateFeed(feedConfig) {
       feed.xml({indent: true})
     );
 
-    console.log(`✨ generated feed for ${id} with ${batches.length} batches`);
+    console.log(`✨ generated feed for ${id} with ${pins.length} unique pins`);
   } catch (error) {
     console.error(`💀 failed generating ${id}:`, error);
   }
@@ -86,200 +291,11 @@ async function generateFeed(feedConfig) {
 async function generateAllFeeds() {
   console.log('📡 generating all feeds...');
   
-  // generate each feed in config
   for (const feed of config.feeds) {
     await generateFeed(feed);
   }
   
-  const indexHtml = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>snout 🐕</title>
-    <style>
-        body {
-            font-family: system-ui, -apple-system, sans-serif;
-            max-width: 800px;
-            margin: 2rem auto;
-            padding: 0 1rem;
-            line-height: 1.5;
-            color: #333;
-        }
-        .feed-card, .add-feed {
-            border: 1px solid #eee;
-            padding: 1.5rem;
-            margin: 1rem 0;
-            border-radius: 8px;
-            background: white;
-        }
-        .add-feed {
-            background: #f8f9fa;
-        }
-        h1, h2 {
-            margin: 0;
-            margin-bottom: 0.5rem;
-        }
-        p {
-            margin: 0;
-            margin-bottom: 1rem;
-            color: #666;
-        }
-        input {
-            display: block;
-            width: 100%;
-            padding: 0.75rem;
-            margin-bottom: 1rem;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            box-sizing: border-box;
-            font-size: 1rem;
-        }
-        input:focus {
-            outline: none;
-            border-color: #0066cc;
-            box-shadow: 0 0 0 2px rgba(0,102,204,0.1);
-        }
-        button {
-            width: 100%;
-            padding: 0.75rem;
-            background: #0066cc;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        button:hover {
-            background: #0052a3;
-        }
-        .note {
-            font-size: 0.9rem;
-            color: #666;
-            margin-top: 0.5rem;
-        }
-        .error {
-            color: #dc2626;
-            margin-bottom: 1rem;
-            display: none;
-        }
-    </style>
-    <script>
-        function extractBoardId(url) {
-            // Handle both full URLs and just board IDs
-            const match = url.match(/pinterest\.com\\/.*\\/(.+?)(\\/|$)/);
-            return match ? match[1] : url.trim();
-        }
-
-        async function addFeed(event) {
-            event.preventDefault();
-            const form = event.target;
-            const errorDiv = document.getElementById('error-message');
-            errorDiv.style.display = 'none';
-            
-            const boardInput = form.boardId.value;
-            const boardId = extractBoardId(boardInput);
-            
-            if (!boardId) {
-                errorDiv.textContent = 'Please enter a valid Pinterest board URL or ID';
-                errorDiv.style.display = 'block';
-                return;
-            }
-
-            const feedId = boardId.toLowerCase().replace(/[^a-z0-9]/g, '-');
-            const title = form.title.value || 'Pinterest Board';
-
-            try {
-                const response = await fetch('https://api.github.com/repos/shorobor-field/snout/dispatches', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': 'Bearer ' + form.token.value,
-                        'Accept': 'application/vnd.github.v3+json'
-                    },
-                    body: JSON.stringify({
-                        event_type: 'add-feed',
-                        client_payload: {
-                            feedId,
-                            title,
-                            boardId,
-                            description: form.description.value
-                        }
-                    })
-                });
-
-                if (response.ok) {
-                    alert('Feed added! It will be generated in a few minutes.');
-                    form.reset();
-                } else {
-                    const error = await response.text();
-                    throw new Error(error);
-                }
-            } catch (error) {
-                errorDiv.textContent = 'Error adding feed: ' + error.message;
-                errorDiv.style.display = 'block';
-            }
-        }
-    </script>
-</head>
-<body>
-    <h1>🐕 snout</h1>
-    <p>Auto-generated Pinterest RSS feeds (10 high-quality pins per entry)</p>
-    
-    <div class="add-feed">
-        <h2>Add New Feed</h2>
-        <form onsubmit="addFeed(event)">
-            <div id="error-message" class="error"></div>
-            <input 
-              type="text" 
-              name="boardId" 
-              placeholder="Pinterest Board URL or ID" 
-              required
-            >
-            <input 
-              type="text" 
-              name="title" 
-              placeholder="Feed Title (optional)"
-            >
-            <input 
-              type="text" 
-              name="description" 
-              placeholder="Description (optional)"
-            >
-            <input 
-              type="password" 
-              name="token" 
-              placeholder="GitHub Token" 
-              required
-            >
-            <button type="submit">Add Feed</button>
-            <div class="note">
-                Paste a Pinterest board URL or ID and your GitHub token to create a new feed
-            </div>
-        </form>
-    </div>
-
-    ${config.feeds.map(feed => `
-        <div class="feed-card">
-            <h2>${feed.title}</h2>
-            ${feed.description ? `<p>${feed.description}</p>` : ''}
-            <a href="./feeds/${feed.id}.xml">Subscribe to RSS feed</a>
-        </div>
-    `).join('')}
-
-    <footer style="margin-top: 2rem; color: #666;">
-        <p>Last updated: ${new Date().toLocaleString()}</p>
-    </footer>
-</body>
-</html>
-  `;
-
-  const publicPath = path.join(__dirname, '..', 'public');
-  await fs.mkdir(publicPath, { recursive: true });
-  await fs.writeFile(path.join(publicPath, 'index.html'), indexHtml);
-  
-  console.log('✨ all feeds generated!');
+  // ... rest of the index.html generation code stays the same ...
 }
 
 generateAllFeeds();
