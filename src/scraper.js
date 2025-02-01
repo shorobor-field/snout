@@ -1,150 +1,156 @@
 import { chromium } from 'playwright';
 import fs from 'fs/promises';
-import { existsSync } from 'fs';
 import path from 'path';
 import config from '../config.json' assert { type: 'json' };
 
-const PINTEREST_EMAIL = process.env.PINTEREST_EMAIL;
-const PINTEREST_PASSWORD = process.env.PINTEREST_PASSWORD;
+// Cookie should be added as a GitHub secret
+const PINTEREST_SESSION = process.env.PINTEREST_SESSION;
 
-// Debug helpers
-async function saveScreenshot(page, name) {
-  const dir = './debug-screenshots';
-  await fs.mkdir(dir, { recursive: true });
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-  await page.screenshot({ 
-    path: `${dir}/${name}-${timestamp}.png`,
-    fullPage: true 
-  });
-}
-
-// Main login function
-async function login(page) {
+async function ensureLogin(page) {
   try {
-    console.log('🔑 Logging in...');
-    await page.goto('https://pinterest.com/login');
-    await saveScreenshot(page, '1-login-page');
+    console.log('🍪 Setting up cookie-based auth...');
     
-    // Fill credentials
-    await page.waitForSelector('#email');
-    await page.fill('#email', PINTEREST_EMAIL);
-    await page.fill('#password', PINTEREST_PASSWORD);
-    await saveScreenshot(page, '2-credentials');
+    // First navigate to Pinterest
+    await page.goto('https://pinterest.com', { timeout: 60000 });
     
-    // Click login
-    await page.click('button[type="submit"]');
-    await saveScreenshot(page, '3-clicked-login');
+    // Set the session cookie
+    await page.context().addCookies([{
+      name: '_pinterest_sess',  // Pinterest's session cookie
+      value: PINTEREST_SESSION,
+      domain: '.pinterest.com',
+      path: '/'
+    }]);
+
+    // Take screenshot after setting cookie
+    await takeScreenshot(page, '1-after-cookie');
+
+    // Verify login by checking for avatar
+    await page.reload();
+    await page.waitForSelector('[data-test-id="header-avatar"], [data-test-id="homefeed-feed"]', {
+      timeout: 20000
+    });
     
-    // Wait for successful login
-    await page.waitForSelector('[data-test-id="header-avatar"]', { timeout: 30000 });
-    await saveScreenshot(page, '4-success');
+    // Take screenshot of logged in state
+    await takeScreenshot(page, '2-logged-in');
     
-    console.log('✅ Login successful');
+    console.log('✅ Cookie auth successful');
     return true;
   } catch (error) {
-    console.error('❌ Login failed:', error.message);
+    console.error('❌ Cookie auth failed:', error.message);
+    // Take error screenshot
+    await takeScreenshot(page, 'error-state');
     return false;
   }
 }
 
-// Get pins from a board
-async function scrapePins(page, boardId) {
-  try {
-    console.log(`Getting pins for board ${boardId}...`);
-    await page.goto(`https://pinterest.com/ideas/?boardId=${boardId}`);
-    await page.waitForLoadState('networkidle');
-    
-    // Scroll a few times to load more pins
-    for (let i = 0; i < 3; i++) {
-      await page.evaluate(() => window.scrollBy(0, window.innerHeight));
-      await page.waitForTimeout(1000);
-    }
-
-    // Extract pins
-    const pins = await page.evaluate(() => {
-      return Array.from(document.querySelectorAll('div'))
-        .filter(div => {
-          const img = div.querySelector('img');
-          const link = div.querySelector('a[href*="/pin/"]');
-          return img && link && div.offsetWidth > 100;
-        })
-        .map(div => {
-          const img = div.querySelector('img');
-          const link = div.querySelector('a[href*="/pin/"]');
-          const title = img?.alt || 'Untitled Pin';
-          const description = div.textContent?.trim() || '';
-          let imageUrl = img?.src || '';
-
-          // Get highest quality image
-          if (imageUrl) {
-            imageUrl = imageUrl.replace(/\/\d+x\//, '/originals/')
-                              .replace(/\?fit=.*$/, '');
-          }
-
-          return {
-            id: link?.href?.match(/\/pin\/(\d+)/)?.[1] || Date.now().toString(),
-            title: title.slice(0, 100), // Truncate long titles
-            description: description.slice(0, 200), // Truncate long descriptions
-            image: imageUrl,
-            url: link?.href || ''
-          };
-        })
-        .filter(pin => pin.url && pin.image);
-    });
-
-    console.log(`Found ${pins.length} pins`);
-    return pins;
-
-  } catch (error) {
-    console.error(`Failed to get pins:`, error.message);
-    return [];
-  }
+async function takeScreenshot(page, name) {
+  const dir = './debug-screenshots';
+  await fs.mkdir(dir, { recursive: true });
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const path = `${dir}/${name}-${timestamp}.png`;
+  await page.screenshot({ 
+    path,
+    fullPage: true 
+  });
+  console.log(`📸 Saved screenshot: ${path}`);
 }
 
-// Main scraping function
-async function scrapeBoards() {
-  console.log('Starting Pinterest scrape...');
-  
+async function scrapePinterestBoard(boardId) {
   const browser = await chromium.launch({ 
     headless: true,
-    args: ['--no-sandbox']
+    args: ['--window-size=1920,1080', '--no-sandbox']
   });
-
+  
   try {
     const context = await browser.newContext({
       viewport: { width: 1920, height: 1080 },
+      deviceScaleFactor: 2,
       userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
     });
-
-    // Create data directory
-    await fs.mkdir('./data', { recursive: true });
-
+    
     const page = await context.newPage();
-    if (!await login(page)) {
+    page.on('console', msg => console.log('Browser log:', msg.text()));
+
+    if (!await ensureLogin(page)) {
       throw new Error('Login failed');
     }
 
-    // Process each feed
-    for (const feed of config.feeds) {
-      console.log(`\nProcessing feed: ${feed.id}`);
-      const pins = await scrapePins(page, feed.boardId);
-      
-      if (pins.length > 0) {
-        const outputPath = `./data/${feed.id}.json`;
-        await fs.writeFile(outputPath, JSON.stringify(pins, null, 2));
-        console.log(`✅ Saved ${pins.length} pins to ${outputPath}`);
-      }
+    console.log(`🎯 getting suggestions for board ${boardId}...`);
+    const url = `https://pinterest.com/?boardId=${boardId}`;
+    await page.goto(url, { timeout: 60000 });
+    await page.waitForLoadState('networkidle');
+    
+    await takeScreenshot(page, '3-board-page');
+    
+    // Wait for content to load
+    await page.waitForTimeout(5000);
+
+    // Scroll multiple times with pauses
+    for (let i = 0; i < 5; i++) {
+      await page.evaluate(() => {
+        window.scrollBy(0, window.innerHeight);
+      });
+      await page.waitForTimeout(2000);
     }
 
+    const pins = await page.evaluate(() => {
+      const allDivs = Array.from(document.querySelectorAll('div'));
+      const pinDivs = allDivs.filter(div => {
+        const hasImage = div.querySelector('img');
+        const hasLink = div.querySelector('a[href*="/pin/"]');
+        const rect = div.getBoundingClientRect();
+        return hasImage && hasLink && rect.width > 100 && rect.height > 100;
+      });
+
+      return pinDivs.map(div => {
+        const img = div.querySelector('img');
+        const link = div.querySelector('a[href*="/pin/"]');
+        
+        let imageUrl = img?.src;
+        if (imageUrl) {
+          imageUrl = imageUrl.replace(/\/\d+x\//, '/originals/')
+                            .replace(/\?fit=.*$/, '');
+        }
+
+        return {
+          id: link?.href?.match(/\/pin\/(\d+)/)?.[1] || Date.now().toString(),
+          title: img?.alt || 'Untitled Pin',
+          image: imageUrl,
+          url: link?.href,
+          description: div.textContent?.trim() || ''
+        };
+      }).filter(pin => pin.url && pin.image);
+    });
+
+    return pins;
   } catch (error) {
-    console.error('💥 Scraping failed:', error.message);
-    process.exit(1);
+    console.error(`💀 failed scraping board ${boardId}:`, error);
+    return [];
   } finally {
     await browser.close();
   }
-
-  console.log('\n✨ Scraping complete!');
 }
 
-// Run the scraper
-scrapeBoards();
+async function scrapeAllBoards() {
+  console.log('🐕 woof! starting pinterest scrape...');
+  await fs.mkdir('./data', { recursive: true });
+  
+  for (const feed of config.feeds) {
+    console.log(`Processing feed: ${feed.id}`);
+    const pins = await scrapePinterestBoard(feed.boardId);
+    
+    if (pins.length > 0) {
+      await fs.writeFile(
+        `./data/${feed.id}.json`,
+        JSON.stringify(pins, null, 2)
+      );
+      console.log(`✅ Saved ${pins.length} pins for ${feed.id}`);
+    } else {
+      console.error(`⚠️ No pins found for ${feed.id}`);
+    }
+  }
+  
+  console.log('✨ done scraping all boards!');
+}
+
+scrapeAllBoards();

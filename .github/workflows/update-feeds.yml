@@ -48,16 +48,12 @@ jobs:
       
       - name: Generate feeds
         run: |
-          # Enable more verbose logging
           export DEBUG=pw:api
-          # Run with increased timeouts
           NODE_OPTIONS="--max-old-space-size=4096" npm start
         env:
-          PINTEREST_EMAIL: ${{ secrets.PINTEREST_EMAIL }}
-          PINTEREST_PASSWORD: ${{ secrets.PINTEREST_PASSWORD }}
-          DEBUG: pw:api  # Enable Playwright debug logging
+          PINTEREST_SESSION: ${{ secrets.PINTEREST_SESSION }}
       
-      # Upload screenshots even if the previous step fails
+      # Upload debug screenshots
       - name: Upload debug screenshots
         if: always()
         uses: actions/upload-artifact@v4
@@ -66,19 +62,8 @@ jobs:
           path: debug-screenshots/
           retention-days: 5
       
-      # Upload logs for debugging
-      - name: Upload logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: logs
-          path: |
-            *.log
-            npm-debug.log*
-          retention-days: 5
-      
       - name: Deploy
-        if: success()  # Only deploy if previous steps succeeded
+        if: success()
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
