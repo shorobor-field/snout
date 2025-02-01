@@ -4,9 +4,9 @@
         <description><![CDATA[Testing what HTML/CSS features work in RSS readers]]></description>
         <link>http://example.com</link>
         <generator>RSS for Node</generator>
-        <lastBuildDate>Sat, 01 Feb 2025 10:13:46 GMT</lastBuildDate>
+        <lastBuildDate>Sat, 01 Feb 2025 10:18:57 GMT</lastBuildDate>
         <atom:link href="http://example.com/rss.xml" rel="self" type="application/rss+xml"/>
-        <pubDate>Sat, 01 Feb 2025 10:13:46 GMT</pubDate>
+        <pubDate>Sat, 01 Feb 2025 10:18:57 GMT</pubDate>
         <item>
             <title><![CDATA[HTML/CSS Compatibility Test]]></title>
             <description><![CDATA[
@@ -34,12 +34,83 @@
           <hr>
         </div>
       
+        <div style="margin: 20px 0;">
+          <h2>2. Tables</h2>
+          
+      <table border="1">
+        <tr>
+          <td>Table cell 1</td>
+          <td>Table cell 2</td>
+        </tr>
+      </table>
+    
+          <hr>
+        </div>
+      
+        <div style="margin: 20px 0;">
+          <h2>3. Images</h2>
+          
+      <img src="https://placekitten.com/200/200" alt="Test image">
+      <figure>
+        <img src="https://placekitten.com/201/201" alt="Test figure image">
+        <figcaption>Image caption</figcaption>
+      </figure>
+    
+          <hr>
+        </div>
+      
+        <div style="margin: 20px 0;">
+          <h2>4. Basic inline CSS</h2>
+          
+      <p style="color: blue;">Blue text</p>
+      <p style="font-size: 20px;">Large text</p>
+      <p style="font-family: Arial;">Arial font</p>
+      <div style="padding: 10px; margin: 10px;">Padded and margined div</div>
+    
+          <hr>
+        </div>
+      
+        <div style="margin: 20px 0;">
+          <h2>5. CSS classes with style tag</h2>
+          
+      <style>
+        .test-class { color: red; }
+        .box { padding: 10px; background: #eee; }
+      </style>
+      <p class="test-class">Red text via class</p>
+      <div class="box">Box with background</div>
+    
+          <hr>
+        </div>
+      
+        <div style="margin: 20px 0;">
+          <h2>6. Flexbox layout</h2>
+          
+      <div style="display: flex; gap: 10px;">
+        <div style="flex: 1;">Flex item 1</div>
+        <div style="flex: 1;">Flex item 2</div>
+      </div>
+    
+          <hr>
+        </div>
+      
+        <div style="margin: 20px 0;">
+          <h2>7. Grid layout</h2>
+          
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+        <div>Grid item 1</div>
+        <div>Grid item 2</div>
+      </div>
+    
+          <hr>
+        </div>
+      
     </body>
     </html>
   ]]></description>
             <link>http://example.com/test</link>
-            <guid isPermaLink="false">test-1738404826751</guid>
-            <pubDate>Sat, 01 Feb 2025 10:13:46 GMT</pubDate>
+            <guid isPermaLink="false">test-1738405137723</guid>
+            <pubDate>Sat, 01 Feb 2025 10:18:57 GMT</pubDate>
         </item>
     </channel>
 </rss>
