@@ -109,32 +109,30 @@ async function scrapePinterestBoard(boardId) {
     await page.waitForLoadState('networkidle');
     await takeScreenshot(page, '3-board-page');
     
-    // Wait for content to load
-    await page.waitForTimeout(5000);
-
-    // Scroll multiple times with pauses
-    for (let i = 0; i < 5; i++) {
-      await page.evaluate(() => {
-        window.scrollBy(0, window.innerHeight);
-      });
-      await page.waitForTimeout(2000);
-    }
-
+    // Wait for pins to load
+    await page.waitForSelector('img', { timeout: 10000 });
+    
+    // Don't scroll, just get the initial pins on the page
     const pins = await page.evaluate(() => {
-      const allDivs = Array.from(document.querySelectorAll('div'));
-      const pinDivs = allDivs.filter(div => {
-        const hasImage = div.querySelector('img');
-        const hasLink = div.querySelector('a[href*="/pin/"]');
-        const rect = div.getBoundingClientRect();
-        return hasImage && hasLink && rect.width > 100 && rect.height > 100;
-      });
+      // Find all pin container divs
+      const pinContainers = Array.from(document.querySelectorAll('div'))
+        .filter(div => {
+          const hasImage = div.querySelector('img');
+          const hasLink = div.querySelector('a[href*="/pin/"]');
+          const rect = div.getBoundingClientRect();
+          // More specific size check for pin containers
+          return hasImage && hasLink && rect.width > 200 && rect.height > 200;
+        })
+        // Take only first 20
+        .slice(0, 20);
 
-      return pinDivs.map(div => {
+      return pinContainers.map(div => {
         const img = div.querySelector('img');
         const link = div.querySelector('a[href*="/pin/"]');
         
         let imageUrl = img?.src;
         if (imageUrl) {
+          // Get highest quality image
           imageUrl = imageUrl.replace(/\/\d+x\//, '/originals/')
                             .replace(/\?fit=.*$/, '');
         }
@@ -146,8 +144,11 @@ async function scrapePinterestBoard(boardId) {
           url: link?.href,
           description: div.textContent?.trim() || ''
         };
-      }).filter(pin => pin.url && pin.image);
+      });
     });
+
+    console.log(`Found ${pins.length} initial pins`);
+    return pins;
 
     return pins;
 
