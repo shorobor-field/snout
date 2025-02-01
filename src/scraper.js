@@ -11,45 +11,48 @@ const __dirname = dirname(__filename);
 
 async function ensureLogin(page, sessionCookie) {
   try {
-    console.log('Raw session cookie details:');
-    console.log('Cookie:', sessionCookie);
-    console.log('Type:', typeof sessionCookie);
-    console.log('Length:', sessionCookie?.length);
+    console.log('Login process starting...');
+    console.log('Raw session cookie input:', sessionCookie);
+    console.log('Session cookie type:', typeof sessionCookie);
+    console.log('Session cookie length:', sessionCookie ? sessionCookie.length : 'N/A');
 
-    if (!sessionCookie) {
-      throw new Error('Session cookie is empty or undefined');
+    // Validate session cookie
+    if (!sessionCookie || typeof sessionCookie !== 'string' || sessionCookie.trim() === '') {
+      throw new Error('Session cookie is empty or invalid');
     }
 
     await page.goto('https://pinterest.com', { timeout: 60000 });
     
-    // Explicit cookie addition with more robust parsing
-    const cookieToAdd = [{
+    // Detailed cookie logging and modification
+    const cookieToAdd = {
       name: '_pinterest_sess',
-      value: sessionCookie.trim(), 
+      value: sessionCookie.trim(), // Trim to remove any whitespace
       domain: '.pinterest.com',
       path: '/'
-    }];
+    };
 
-    console.log('Prepared cookie for addition:', JSON.stringify(cookieToAdd));
+    console.log('Prepared cookie for addition:', {
+      name: cookieToAdd.name,
+      value: cookieToAdd.value ? `${cookieToAdd.value.slice(0, 10)}...` : 'EMPTY',
+      domain: cookieToAdd.domain,
+      path: cookieToAdd.path
+    });
 
-    // Use try-catch with more detailed error logging
-    try {
-      await page.context().addCookies(cookieToAdd);
-    } catch (cookieError) {
-      console.error('Detailed cookie addition error:', cookieError);
-      console.error('Cookie addition error details:', JSON.stringify(cookieError, Object.getOwnPropertyNames(cookieError)));
-      throw cookieError;
-    }
+    await page.context().addCookies([cookieToAdd]);
 
+    console.log('Cookies added, reloading page...');
     await page.reload();
+
+    console.log('Waiting for login selectors...');
     await page.waitForSelector('[data-test-id="header-avatar"], [data-test-id="homefeed-feed"]', {
       timeout: 20000
     });
     
+    console.log('✅ Login successful!');
     return true;
   } catch (error) {
-    console.error('❌ Complete login failure details:', error);
-    console.error('Full error stack:', error.stack);
+    console.error('❌ Cookie auth failed:', error.message);
+    console.error('Full error details:', error);
     return false;
   }
 }
