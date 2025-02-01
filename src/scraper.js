@@ -21,6 +21,9 @@ async function scrapePinterestBoard(boardId) {
     
     const page = await context.newPage();
 
+    // Add debug logging
+    page.on('console', msg => console.log('Browser log:', msg.text()));
+
     console.log('🔑 attempting login...');
     await page.goto('https://pinterest.com/login', { timeout: 60000 });
     await page.waitForLoadState('domcontentloaded');
@@ -31,36 +34,64 @@ async function scrapePinterestBoard(boardId) {
     await page.waitForTimeout(3000);
 
     console.log(`🎯 getting suggestions for board ${boardId}...`);
-    // Using the correct URL format as shown in your screenshot
-    await page.goto(`https://pinterest.com/?boardId=${boardId}`, { timeout: 60000 });
-    await page.waitForTimeout(3000);
+    const url = `https://pinterest.com/?boardId=${boardId}`;
+    console.log('Navigating to:', url);
+    await page.goto(url, { timeout: 60000 });
+    
+    // Wait longer and log progress
+    console.log('Waiting for initial load...');
+    await page.waitForTimeout(5000);
 
-    // Scroll a few times to ensure content loads
-    for (let i = 0; i < 3; i++) {
-      await page.evaluate(() => {
+    // Scroll and log progress
+    console.log('Starting scrolls...');
+    for (let i = 0; i < 5; i++) {
+      await page.evaluate((i) => {
         window.scrollBy(0, window.innerHeight);
-      });
-      await page.waitForTimeout(1000);
+        console.log(`Scroll ${i + 1} completed`);
+      }, i);
+      await page.waitForTimeout(2000);
     }
 
-    const pins = await page.evaluate(() => {
-      // Get all pins after "More ideas for this board"
-      const allDivs = Array.from(document.querySelectorAll('div'));
-      const moreIdeasDiv = allDivs.find(div => 
-        div.textContent?.includes('More ideas for this board')
-      );
+    // Debug page content
+    console.log('Analyzing page content...');
+    const debugInfo = await page.evaluate(() => {
+      const texts = Array.from(document.querySelectorAll('div'))
+        .map(div => div.textContent)
+        .filter(text => text && text.includes('More ideas'));
       
-      if (!moreIdeasDiv) {
-        console.log('Could not find More ideas section');
-        return [];
-      }
+      const gridItems = document.querySelectorAll('[data-grid-item="true"]');
+      const images = document.querySelectorAll('img');
+      
+      return {
+        foundMoreIdeasTexts: texts,
+        totalGridItems: gridItems.length,
+        totalImages: images.length,
+        pageHeight: document.body.scrollHeight,
+        viewportHeight: window.innerHeight
+      };
+    });
+    
+    console.log('Debug info:', debugInfo);
 
-      // Get all pins in the grid after "More ideas"
-      const suggestions = Array.from(document.querySelectorAll('[data-grid-item="true"]'))
-        .filter(el => {
-          const rect = el.getBoundingClientRect();
-          return rect.top > moreIdeasDiv.getBoundingClientRect().bottom;
-        });
+    const pins = await page.evaluate(() => {
+      // Try different selectors
+      const selectors = [
+        '[data-grid-item="true"]',
+        '[data-test-id="pin"]',
+        '[data-test-id="pinrep"]',
+        '.Grid__Item'
+      ];
+      
+      let suggestions = [];
+      
+      for (const selector of selectors) {
+        const elements = document.querySelectorAll(selector);
+        console.log(`Found ${elements.length} elements with selector ${selector}`);
+        if (elements.length > 0) {
+          suggestions = Array.from(elements);
+          break;
+        }
+      }
 
       return suggestions.map(pin => {
         const img = pin.querySelector('img');
@@ -68,19 +99,21 @@ async function scrapePinterestBoard(boardId) {
         const titleEl = pin.querySelector('[data-test-id="pin-title"]') || 
                        pin.querySelector('[title]');
         
-        // Get the highest quality image URL
         let imageUrl = img?.src;
         if (imageUrl) {
           imageUrl = imageUrl.replace(/\/\d+x\//, '/originals/');
         }
 
-        return {
+        const pinData = {
           id: pin.getAttribute('data-pin-id') || Date.now().toString(),
           title: titleEl?.textContent?.trim() || titleEl?.getAttribute('title')?.trim() || 'Untitled Pin',
           description: pin.querySelector('[data-test-id="pin-description"]')?.textContent?.trim() || '',
           image: imageUrl,
           url: link?.href
         };
+        
+        console.log('Extracted pin data:', pinData);
+        return pinData;
       }).filter(pin => pin.url && pin.image);
     });
 
@@ -89,6 +122,14 @@ async function scrapePinterestBoard(boardId) {
 
   } catch (error) {
     console.error(`💀 failed scraping board ${boardId}:`, error);
+    
+    // Log the full error with stack trace
+    console.error('Detailed error:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    });
+    
     return [];
   } finally {
     await browser.close();
