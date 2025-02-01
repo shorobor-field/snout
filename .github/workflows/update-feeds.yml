@@ -60,7 +60,7 @@ jobs:
       # Upload screenshots even if the previous step fails
       - name: Upload debug screenshots
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: debug-screenshots
           path: debug-screenshots/
@@ -69,7 +69,7 @@ jobs:
       # Upload logs for debugging
       - name: Upload logs
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: logs
           path: |
