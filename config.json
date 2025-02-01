@@ -1,18 +1,18 @@
 {
   "feeds": [
     {
-      "id": "dseing",
-      "title": "garphec vibes",
-      "description": "auraphd dsingest suggestions",
-      "boardId": "854417429245709127",
+      "id": "raiyan-fashion",
+      "title": "Fashion",
+      "description": "",
+      "boardId": "854417429245692977",
       "schedule": {
         "monday": true,
-        "tuesday": false,
+        "tuesday": true,
         "wednesday": true,
-        "thursday": false,
+        "thursday": true,
         "friday": true,
-        "saturday": false,
-        "sunday": false
+        "saturday": true,
+        "sunday": true
       }
     }
   ]

@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>snout config editor</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 800px;
+      margin: 20px auto;
+      padding: 20px;
+      line-height: 1.5;
+    }
+    .card {
+      border: 1px solid #ddd;
+      padding: 16px;
+      margin: 8px 0;
+      border-radius: 4px;
+    }
+    .tag {
+      background: #f0f0f0;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 12px;
+      margin-right: 4px;
+    }
+    .error {
+      color: red;
+      font-size: 14px;
+    }
+    button {
+      padding: 8px 16px;
+      border: 1px solid #ddd;
+      background: white;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #f0f0f0;
+    }
+    button.delete {
+      background: #fee2e2;
+      border-color: #fecaca;
+    }
+    button.delete:hover {
+      background: #fecaca;
+    }
+    button.save {
+      background: #dcfce7;
+      border-color: #bbf7d0;
+    }
+    button.save:hover {
+      background: #bbf7d0;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 8px;
+      margin: 4px 0;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    .schedule {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .day-card {
+      border: 1px solid #ddd;
+      padding: 8px;
+      border-radius: 4px;
+    }
+    .actions {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    #saveStatus {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 8px 16px;
+      border-radius: 4px;
+      display: none;
+    }
+    .status-success {
+      background: #dcfce7;
+      color: #166534;
+    }
+    .status-error {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+  </style>
+</head>
+<body>
+  <h1>🐕 snout config editor</h1>
+  
+  <div class="card">
+    <h3>setup</h3>
+    <input type="text" id="token" placeholder="github token (needs repo access)">
+    <p style="color: #666; font-size: 14px">
+      to get a token: github.com → settings → developer settings → personal access tokens → tokens (classic) → generate new token
+    </p>
+  </div>
+
+  <div class="actions">
+    <button onclick="loadConfig()" id="loadBtn">load current config</button>
+    <button onclick="saveConfig()" id="saveBtn" class="save" style="display: none">save changes</button>
+  </div>
+
+  <div id="editor" style="display: none">
+    <div id="currentFeeds">
+      <h2>current feeds</h2>
+      <div id="feedsList"></div>
+    </div>
+
+    <div class="card">
+      <h2>add new feed</h2>
+      <input type="text" id="newId" placeholder="feed id (e.g., nature-pics)">
+      <input type="text" id="newTitle" placeholder="feed title">
+      <input type="text" id="newDesc" placeholder="description (optional)">
+      <input type="text" id="newBoardId" placeholder="pinterest board id">
+      
+      <p>schedule:</p>
+      <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+        <div><input type="checkbox" id="monday"><label for="monday">monday</label></div>
+        <div><input type="checkbox" id="tuesday"><label for="tuesday">tuesday</label></div>
+        <div><input type="checkbox" id="wednesday"><label for="wednesday">wednesday</label></div>
+        <div><input type="checkbox" id="thursday"><label for="thursday">thursday</label></div>
+        <div><input type="checkbox" id="friday"><label for="friday">friday</label></div>
+        <div><input type="checkbox" id="saturday"><label for="saturday">saturday</label></div>
+        <div><input type="checkbox" id="sunday"><label for="sunday">sunday</label></div>
+      </div>
+      
+      <div id="addError" class="error"></div>
+      <button onclick="addFeed()" style="margin-top: 16px">add feed</button>
+    </div>
+
+    <div>
+      <h2>schedule overview</h2>
+      <div id="scheduleOverview" class="schedule"></div>
+    </div>
+  </div>
+
+  <div id="saveStatus"></div>
+
+  <script>
+    const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    let feeds = [];
+    const REPO = 'shorobor-field/snout'; // change this to your repo
+
+    async function loadConfig() {
+      const token = document.getElementById('token').value;
+      if (!token) {
+        showStatus('please enter a github token', 'error');
+        return;
+      }
+
+      try {
+        const response = await fetch(`https://api.github.com/repos/${REPO}/contents/config.json`, {
+          headers: {
+            'Authorization': `token ${token}`,
+            'Accept': 'application/vnd.github.v3.raw'
+          }
+        });
+        
+        if (!response.ok) throw new Error('failed to load config');
+        
+        const config = await response.json();
+        feeds = config.feeds || [];
+        updateUI();
+        document.getElementById('editor').style.display = 'block';
+        document.getElementById('saveBtn').style.display = 'inline-block';
+        showStatus('config loaded!', 'success');
+      } catch (error) {
+        showStatus('error loading config: ' + error.message, 'error');
+      }
+    }
+
+    async function saveConfig() {
+      const token = document.getElementById('token').value;
+      if (!token) {
+        showStatus('please enter a github token', 'error');
+        return;
+      }
+
+      try {
+        // Get current file info to get the SHA
+        const infoResponse = await fetch(`https://api.github.com/repos/${REPO}/contents/config.json`, {
+          headers: {
+            'Authorization': `token ${token}`
+          }
+        });
+        const fileInfo = await infoResponse.json();
+
+        // Update file
+        const response = await fetch(`https://api.github.com/repos/${REPO}/contents/config.json`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `token ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            message: 'update feeds config',
+            content: btoa(JSON.stringify({ feeds }, null, 2)),
+            sha: fileInfo.sha
+          })
+        });
+
+        if (!response.ok) throw new Error('failed to save');
+        
+        showStatus('saved successfully!', 'success');
+      } catch (error) {
+        showStatus('error saving: ' + error.message, 'error');
+      }
+    }
+
+    function showStatus(message, type) {
+      const status = document.getElementById('saveStatus');
+      status.textContent = message;
+      status.className = `status-${type}`;
+      status.style.display = 'block';
+      setTimeout(() => status.style.display = 'none', 3000);
+    }
+
+    function addFeed() {
+      const id = document.getElementById('newId').value;
+      const title = document.getElementById('newTitle').value;
+      const description = document.getElementById('newDesc').value;
+      const boardId = document.getElementById('newBoardId').value;
+      const schedule = {};
+      
+      DAYS.forEach(day => {
+        schedule[day] = document.getElementById(day).checked;
+      });
+
+      if (!id || !title || !boardId) {
+        document.getElementById('addError').textContent = 'please fill required fields';
+        return;
+      }
+
+      if (!Object.values(schedule).some(Boolean)) {
+        document.getElementById('addError').textContent = 'select at least one day';
+        return;
+      }
+
+      feeds.push({ id, title, description, boardId, schedule });
+      updateUI();
+      
+      // Clear form
+      document.getElementById('newId').value = '';
+      document.getElementById('newTitle').value = '';
+      document.getElementById('newDesc').value = '';
+      document.getElementById('newBoardId').value = '';
+      DAYS.forEach(day => document.getElementById(day).checked = false);
+      document.getElementById('addError').textContent = '';
+    }
+
+    function removeFeed(id) {
+      feeds = feeds.filter(feed => feed.id !== id);
+      updateUI();
+    }
+
+    function updateUI() {
+      // Update feeds list
+      const feedsList = document.getElementById('feedsList');
+      feedsList.innerHTML = feeds.map(feed => `
+        <div class="card">
+          <div style="display: flex; justify-content: space-between; align-items: start">
+            <div>
+              <h3 style="margin: 0">${feed.title}</h3>
+              <p style="color: #666; margin: 4px 0">${feed.description || ''}</p>
+              <p style="color: #666; margin: 4px 0">id: ${feed.id}</p>
+              <p style="color: #666; margin: 4px 0">board: ${feed.boardId}</p>
+              <div>
+                ${Object.entries(feed.schedule)
+                  .filter(([_, enabled]) => enabled)
+                  .map(([day]) => `<span class="tag">${day}</span>`)
+                  .join('')}
+              </div>
+            </div>
+            <button class="delete" onclick="removeFeed('${feed.id}')">remove</button>
+          </div>
+        </div>
+      `).join('');
+
+      // Update schedule overview
+      const overview = document.getElementById('scheduleOverview');
+      overview.innerHTML = DAYS.map(day => `
+        <div class="day-card">
+          <h3 style="margin: 0 0 8px 0">${day}</h3>
+          ${feeds
+            .filter(feed => feed.schedule[day])
+            .map(feed => `<div style="font-size: 14px; color: #666">${feed.title}</div>`)
+            .join('')}
+        </div>
+      `).join('');
+    }
+  </script>
+</body>
+</html>
