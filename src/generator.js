@@ -137,7 +137,6 @@ async function generateAllFeeds() {
     <body style="margin: 0; padding: 20px; font-family: Georgia, serif; background: #f8f8f8;">
       <div style="max-width: 800px; margin: 0 auto;">
         <div style="text-align: center; margin-bottom: 40px;">
-          <img src="${logoUrl}" alt="Logo" style="width: 60px; height: 60px; margin-bottom: 20px;">
           <h1 style="font-family: 'Cormorant Garamond', Georgia, serif; font-size: 3em; color: #1a1a1a; margin: 0; font-weight: 300;">🐕 snout</h1>
           <h2 style="font-weight: normal; color: #666; margin: 10px 0;">Pinterest RSS feeds</h2>
         </div>
