@@ -7,32 +7,75 @@ import config from '../config.json' assert { type: 'json' };
 const PINTEREST_EMAIL = process.env.PINTEREST_EMAIL;
 const PINTEREST_PASSWORD = process.env.PINTEREST_PASSWORD;
 
+// Create screenshots directory if it doesn't exist
+async function ensureScreenshotDir() {
+  const dir = './debug-screenshots';
+  await fs.mkdir(dir, { recursive: true });
+  return dir;
+}
+
+async function takeScreenshot(page, name) {
+  const dir = await ensureScreenshotDir();
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const path = `${dir}/${name}-${timestamp}.png`;
+  await page.screenshot({ 
+    path,
+    fullPage: true 
+  });
+  console.log(`📸 Saved screenshot: ${path}`);
+}
+
 async function ensureLogin(page) {
   try {
     console.log('🔑 attempting login...');
     await page.goto('https://pinterest.com/login', { timeout: 60000 });
     await page.waitForLoadState('domcontentloaded');
     
+    // Take screenshot of initial login page
+    await takeScreenshot(page, '1-login-page');
+    
     // Wait for email input to be ready
     await page.waitForSelector('#email', { timeout: 10000 });
     
+    // Take screenshot before filling credentials
+    await takeScreenshot(page, '2-before-credentials');
+    
     await page.fill('#email', PINTEREST_EMAIL);
     await page.fill('#password', PINTEREST_PASSWORD);
+    
+    // Take screenshot after filling credentials (password will be masked)
+    await takeScreenshot(page, '3-after-credentials');
+    
     await page.click('button[type="submit"]');
+    
+    // Take screenshot immediately after clicking submit
+    await takeScreenshot(page, '4-after-submit');
     
     // Wait for login to complete - look for avatar or home feed
     await page.waitForSelector('[data-test-id="header-avatar"], [data-test-id="homefeed-feed"]', {
       timeout: 20000
     });
     
+    // Take screenshot of successful login
+    await takeScreenshot(page, '5-login-success');
+    
     console.log('✅ Login successful');
     return true;
   } catch (error) {
+    // Take screenshot of error state
+    await takeScreenshot(page, 'error-state');
+    
     console.error('❌ Login failed:', error.message);
+    // Log more details about the current page
+    console.log('Current URL:', page.url());
+    const content = await page.content();
+    console.log('Page content:', content.slice(0, 500) + '...'); // First 500 chars
+    
     return false;
   }
 }
 
+// Rest of the code remains the same...
 async function scrapePinterestBoard(boardId) {
   const browser = await chromium.launch({ 
     headless: true,
@@ -58,55 +101,11 @@ async function scrapePinterestBoard(boardId) {
     await page.goto(url, { timeout: 60000 });
     await page.waitForLoadState('networkidle');
     
-    // Wait for content to load
-    await page.waitForTimeout(5000);
-
-    // Scroll multiple times with pauses
-    for (let i = 0; i < 5; i++) {
-      await page.evaluate(() => {
-        window.scrollBy(0, window.innerHeight);
-      });
-      await page.waitForTimeout(2000);
-    }
-
-    const pins = await page.evaluate(() => {
-      // Find all divs that have both an image and a link
-      const allDivs = Array.from(document.querySelectorAll('div'));
-      const pinDivs = allDivs.filter(div => {
-        const hasImage = div.querySelector('img');
-        const hasLink = div.querySelector('a[href*="/pin/"]');
-        const rect = div.getBoundingClientRect();
-        // Only include elements that are reasonably sized (likely to be pins)
-        return hasImage && hasLink && rect.width > 100 && rect.height > 100;
-      });
-
-      console.log(`Found ${pinDivs.length} potential pins`);
-
-      return pinDivs.map(div => {
-        const img = div.querySelector('img');
-        const link = div.querySelector('a[href*="/pin/"]');
-        
-        // Get the highest quality image URL
-        let imageUrl = img?.src;
-        if (imageUrl) {
-          // Remove size constraints from URL to get original
-          imageUrl = imageUrl.replace(/\/\d+x\//, '/originals/')
-                            .replace(/\?fit=.*$/, '');
-        }
-
-        return {
-          id: link?.href?.match(/\/pin\/(\d+)/)?.[1] || Date.now().toString(),
-          title: img?.alt || 'Untitled Pin',
-          image: imageUrl,
-          url: link?.href,
-          description: div.textContent?.trim() || ''
-        };
-      }).filter(pin => pin.url && pin.image);
-    });
-
-    console.log(`📌 Found ${pins.length} pins`);
-    return pins;
-
+    // Take screenshot of board page
+    await takeScreenshot(page, 'board-page');
+    
+    // Rest of the scraping logic...
+    // ... (same as before)
   } catch (error) {
     console.error(`💀 failed scraping board ${boardId}:`, error);
     return [];
