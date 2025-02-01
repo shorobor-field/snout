@@ -105,9 +105,17 @@ async function scrapePinterestBoard(boardId) {
     const url = `https://www.pinterest.com/?boardId=${boardId}`;
     console.log(`Navigating to: ${url}`);
     
-    await page.goto(url, { timeout: 60000 });
-    await page.waitForLoadState('networkidle');
-    await takeScreenshot(page, '3-board-page');
+    await page.goto(url);
+    console.log('Initial page load complete');
+    await takeScreenshot(page, '3a-initial-load');
+
+    // Wait a bit for suggestions to load
+    await page.waitForTimeout(3000);
+    await takeScreenshot(page, '3b-after-wait');
+    
+    console.log('Looking for pins...');
+    // Wait for any image to appear
+    await page.waitForSelector('img', { timeout: 10000 });
     
     // Wait for pins to load
     await page.waitForSelector('img', { timeout: 10000 });
