@@ -117,22 +117,31 @@ async function scrapePinterestBoard(boardId) {
     // Wait for any image to appear
     await page.waitForSelector('img', { timeout: 10000 });
     
-    // Wait for pins to load
-    await page.waitForSelector('img', { timeout: 10000 });
-    
-    // Don't scroll, just get the initial pins on the page
+    // Wait for the "More ideas" section to appear
+    console.log('Waiting for suggestions section...');
+    await page.waitForSelector('h2:has-text("More ideas for this board")', { timeout: 10000 });
+    console.log('Found suggestions section');
+    await takeScreenshot(page, '3c-found-suggestions');
+
+    // Get pins from the suggestions section
     const pins = await page.evaluate(() => {
-      // Find all pin container divs
-      const pinContainers = Array.from(document.querySelectorAll('div'))
+      // Find the "More ideas" heading
+      const heading = Array.from(document.querySelectorAll('h2'))
+        .find(h2 => h2.textContent.includes('More ideas for this board'));
+      
+      if (!heading) return [];
+      
+      // Get all pin containers that come after this heading
+      const pinContainers = Array.from(heading.parentElement.querySelectorAll('div'))
         .filter(div => {
           const hasImage = div.querySelector('img');
           const hasLink = div.querySelector('a[href*="/pin/"]');
           const rect = div.getBoundingClientRect();
-          // More specific size check for pin containers
           return hasImage && hasLink && rect.width > 200 && rect.height > 200;
         })
-        // Take only first 20
-        .slice(0, 20);
+        .slice(0, 20); // Take only first 20
+
+      console.log(`Found ${pinContainers.length} suggested pins`);
 
       return pinContainers.map(div => {
         const img = div.querySelector('img');
@@ -140,7 +149,6 @@ async function scrapePinterestBoard(boardId) {
         
         let imageUrl = img?.src;
         if (imageUrl) {
-          // Get highest quality image
           imageUrl = imageUrl.replace(/\/\d+x\//, '/originals/')
                             .replace(/\?fit=.*$/, '');
         }
@@ -152,10 +160,10 @@ async function scrapePinterestBoard(boardId) {
           url: link?.href,
           description: div.textContent?.trim() || ''
         };
-      });
+      }).filter(pin => pin.url && pin.image);
     });
 
-    console.log(`Found ${pins.length} initial pins`);
+    console.log(`Found ${pins.length} unique pins after filtering`);
     return pins;
 
     return pins;
