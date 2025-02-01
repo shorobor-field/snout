@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?><rss xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
+    <channel>
+        <title><![CDATA[RSS Compatibility Test Feed]]></title>
+        <description><![CDATA[Testing what HTML/CSS features work in RSS readers]]></description>
+        <link>http://example.com</link>
+        <generator>RSS for Node</generator>
+        <lastBuildDate>Sat, 01 Feb 2025 10:13:46 GMT</lastBuildDate>
+        <atom:link href="http://example.com/rss.xml" rel="self" type="application/rss+xml"/>
+        <pubDate>Sat, 01 Feb 2025 10:13:46 GMT</pubDate>
+        <item>
+            <title><![CDATA[HTML/CSS Compatibility Test]]></title>
+            <description><![CDATA[
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+    </head>
+    <body>
+      <h1>RSS Compatibility Test</h1>
+      <p>Testing various HTML and CSS features. Each section tests different features.</p>
+      <hr>
+      
+        <div style="margin: 20px 0;">
+          <h2>1. Basic HTML</h2>
+          
+      <h1>Basic HTML Test</h1>
+      <p>Regular paragraph</p>
+      <b>Bold text</b>
+      <i>Italic text</i>
+      <a href="https://example.com">Link</a>
+      <br>
+      <hr>
+    
+          <hr>
+        </div>
+      
+    </body>
+    </html>
+  ]]></description>
+            <link>http://example.com/test</link>
+            <guid isPermaLink="false">test-1738404826751</guid>
+            <pubDate>Sat, 01 Feb 2025 10:13:46 GMT</pubDate>
+        </item>
+    </channel>
+</rss>
