@@ -54,8 +54,30 @@ async function scrapePinterestBoard(page, boardUrl) {
 
     // Look for "More ideas" button and click it
     console.log('looking for more ideas button...');
-    const moreIdeasButton = await page.getByRole('button', { name: 'More ideas' });
-    await moreIdeasButton.click();
+    
+    // try multiple strategies to find the button
+    const moreIdeasButton = await page.evaluate(() => {
+      // try svg aria-label first
+      const svgButton = document.querySelector('svg[aria-label="More ideas"]')?.closest('.Jea.jzS');
+      if (svgButton) return svgButton;
+      
+      // try text content
+      const textButton = Array.from(document.querySelectorAll('.tBJ')).find(el => 
+        el.textContent.trim() === 'More ideas'
+      )?.closest('.Jea.jzS');
+      if (textButton) return textButton;
+      
+      return null;
+    });
+    
+    if (!moreIdeasButton) {
+      throw new Error('Could not find More ideas button');
+    }
+    
+    await page.evaluate(() => {
+      const button = document.querySelector('svg[aria-label="More ideas"]')?.closest('.Jea.jzS');
+      if (button) button.click();
+    });
     
     // Wait for the new content to load
     await page.waitForTimeout(5000);
