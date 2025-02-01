@@ -115,7 +115,8 @@ async function scrapePinterestBoard(boardUrl) {
 
 async function scrapeAllBoards() {
   console.log('Starting Pinterest scrape...');
-  await fs.mkdir('./data', { recursive: true });
+  // ensure both data and public folders exist
+  await fs.mkdir(path.join(__dirname, '..', 'data'), { recursive: true });
   
   for (const feed of config.feeds) {
     const pins = await scrapePinterestBoard(feed.boardUrl);

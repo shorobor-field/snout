@@ -44,6 +44,9 @@ async function generateFeed(feedConfig) {
   const { id, title, description, boardUrl } = feedConfig;
   
   try {
+    // ensure data directory exists
+    const dataDir = path.join(__dirname, '..', 'data');
+    await fs.mkdir(dataDir, { recursive: true });
     const dataPath = path.join(__dirname, '..', 'data', `${id}.json`);
     const data = await fs.readFile(dataPath, 'utf-8');
     const pins = JSON.parse(data);
