@@ -128,42 +128,60 @@ async function scrapePinterestBoard(boardId) {
       const saveButtons = Array.from(document.querySelectorAll('svg[aria-label="Save"]'));
       console.log(`Found ${saveButtons.length} save buttons`);
       
-      // Get their parent pin containers
-      const pinContainers = saveButtons
-        .map(btn => btn.closest('div[role="button"]')?.parentElement?.parentElement)
-        .filter(Boolean)
-        .slice(0, 20);
-      
-      console.log(`Found ${pinContainers.length} pin containers`);
+      // Debug: Log DOM structure around first save button
+      const firstButton = saveButtons[0];
+      let el = firstButton;
+      let structure = [];
+      for (let i = 0; i < 10; i++) {
+        if (!el) break;
+        structure.push({
+          tag: el.tagName?.toLowerCase(),
+          role: el.getAttribute('role'),
+          class: el.className,
+          hasImg: !!el.querySelector('img'),
+          hasLink: !!el.querySelector('a[href*="/pin/"]')
+        });
+        el = el.parentElement;
+      }
+      console.log('DOM structure:', JSON.stringify(structure, null, 2));
 
-      const results = pinContainers.map(div => {
-        const img = div.querySelector('img');
-        const link = div.querySelector('a[href*="/pin/"]');
+      // Also log complete structure of first pin container
+      const firstContainer = saveButtons[0]?.closest('[data-test-id="pin"]') || 
+                           saveButtons[0]?.closest('[role="listitem"]');
+      if (firstContainer) {
+        console.log('HTML of pin container:', firstContainer.outerHTML);
+      }
+
+      // Get pin containers
+      const pins = saveButtons.map(btn => {
+        const container = btn.closest('[data-test-id="pin"]') || 
+                         btn.closest('[role="listitem"]');
         
-        // Log what we're finding for debugging
-        console.log('Image:', img?.src);
-        console.log('Link:', link?.href);
-        
-        let imageUrl = img?.src;
-        if (imageUrl) {
-          imageUrl = imageUrl.replace(/\/\d+x\//, '/originals/')
-                            .replace(/\?fit=.*$/, '');
+        if (!container) {
+          console.log('Could not find container for a save button');
+          return null;
         }
 
-        const pin = {
+        const img = container.querySelector('img');
+        const link = container.querySelector('a[href*="/pin/"]');
+        
+        console.log('Found container:', {
+          hasImg: !!img,
+          imgSrc: img?.src,
+          hasLink: !!link,
+          linkHref: link?.href
+        });
+        
+        return {
           id: link?.href?.match(/\/pin\/(\d+)/)?.[1] || Date.now().toString(),
           title: img?.alt || 'Untitled Pin',
-          image: imageUrl,
+          image: img?.src?.replace(/\/\d+x\//, '/originals/').replace(/\?fit=.*$/, ''),
           url: link?.href,
-          description: div.textContent?.trim() || ''
+          description: container.textContent?.trim() || ''
         };
+      }).filter(Boolean);
 
-        console.log('Created pin:', pin);
-        return pin;
-      });
-
-      console.log(`Created ${results.length} pin objects`);
-      return results;
+      return pins;
     });
 
     console.log(`Returned ${pins.length} pins from page.evaluate()`);
