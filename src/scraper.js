@@ -17,11 +17,9 @@ async function takeScreenshot(page, name) {
   const dir = await ensureScreenshotDir();
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
   const path = `${dir}/${name}-${timestamp}.png`;
-  
   await page.screenshot({ 
     path,
-    fullPage: true,
-    quality: 50  // Lower quality for smaller file size
+    fullPage: true 
   });
   console.log(`📸 Saved screenshot: ${path}`);
 }
@@ -29,18 +27,15 @@ async function takeScreenshot(page, name) {
 async function ensureLogin(page) {
   try {
     console.log('🔑 attempting login...');
-    console.log('Using email:', PINTEREST_EMAIL);
-    console.log('Using password:', PINTEREST_PASSWORD);
-
     await page.goto('https://pinterest.com/login', { timeout: 60000 });
     await page.waitForLoadState('domcontentloaded');
     
-    // Take full page screenshot
+    // Take screenshot of initial login page
     await takeScreenshot(page, '1-login-page');
     
     await page.waitForSelector('#email', { timeout: 10000 });
     
-    // Make password visible
+    // Make password visible for debugging
     await page.evaluate(() => {
       const pwField = document.querySelector('#password');
       if (pwField) pwField.type = 'text';
@@ -49,15 +44,14 @@ async function ensureLogin(page) {
     await page.fill('#email', PINTEREST_EMAIL);
     await page.fill('#password', PINTEREST_PASSWORD);
     
-    // Screenshot after filling credentials
-    await takeScreenshot(page, '2-credentials-filled');
+    // Screenshot with visible password
+    await takeScreenshot(page, '2-filled-credentials');
     
     await page.click('button[type="submit"]');
     
-    // Screenshot after clicking submit
     await takeScreenshot(page, '3-after-submit');
     
-    // Wait for login to complete
+    // Wait for login to complete - look for avatar or home feed
     await page.waitForSelector('[data-test-id="header-avatar"], [data-test-id="homefeed-feed"]', {
       timeout: 20000
     });
@@ -71,10 +65,8 @@ async function ensureLogin(page) {
     
     console.error('❌ Login failed:', error.message);
     console.log('Current URL:', page.url());
-    
-    // Log the HTML content for debugging
     const content = await page.content();
-    console.log('Page HTML:', content);
+    console.log('Page content:', content.slice(0, 500) + '...'); // First 500 chars
     
     return false;
   }
@@ -89,7 +81,7 @@ async function scrapePinterestBoard(boardId) {
   try {
     const context = await browser.newContext({
       viewport: { width: 1920, height: 1080 },
-      deviceScaleFactor: 1,  // Reduced for smaller file sizes
+      deviceScaleFactor: 2,  // Kept high quality
       userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
     });
     
@@ -107,7 +99,17 @@ async function scrapePinterestBoard(boardId) {
     
     await takeScreenshot(page, '5-board-page');
     
-    // Rest of scraping code stays the same...
+    // Wait for content to load
+    await page.waitForTimeout(5000);
+
+    // Scroll multiple times with pauses
+    for (let i = 0; i < 5; i++) {
+      await page.evaluate(() => {
+        window.scrollBy(0, window.innerHeight);
+      });
+      await page.waitForTimeout(2000);
+    }
+
     const pins = await page.evaluate(() => {
       const allDivs = Array.from(document.querySelectorAll('div'));
       const pinDivs = allDivs.filter(div => {
