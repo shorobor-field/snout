@@ -9,14 +9,12 @@ import config from '../config.json' assert { type: 'json' };
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const PINTEREST_SESSION = process.env.PINTEREST_SESSION;
-
-async function ensureLogin(page) {
+async function ensureLogin(page, sessionCookie) {
   try {
     await page.goto('https://pinterest.com', { timeout: 60000 });
     await page.context().addCookies([{
       name: '_pinterest_sess',
-      value: PINTEREST_SESSION,
+      value: sessionCookie,
       domain: '.pinterest.com',
       path: '/'
     }]);
@@ -46,41 +44,15 @@ async function verifyImageUrl(page, url) {
   }
 }
 
-async function scrapePinterestBoard(boardUrl) {
-  const browser = await chromium.launch({ 
-    headless: true,
-    args: [
-      '--no-sandbox',
-      '--disable-web-security',
-      '--disable-features=IsolateOrigins,site-per-process',
-    ]
-  });
-  
+async function scrapePinterestBoard(page, boardUrl) {
   try {
-    const context = await browser.newContext({
-      viewport: { width: 1920, height: 1080 },
-      deviceScaleFactor: 2,
-      userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      ignoreHTTPSErrors: true,
-      permissions: ['geolocation'],
-      bypassCSP: true,
-    });
-    
-    const page = await context.newPage();
-
-    if (!await ensureLogin(page)) {
-      throw new Error('Login failed');
-    }
-
     console.log(`🔍 navigating to ${boardUrl}...`);
-    // directly navigate to the board url
     await page.goto(boardUrl);
     await page.waitForTimeout(3000);
     await page.waitForSelector('img', { timeout: 10000 });
     await page.waitForTimeout(3000);
 
     let pins = await page.evaluate(() => {
-      // try multiple selectors since pinterest's markup changes often
       const containers = [
         ...document.querySelectorAll('[data-test-id="pin"]'),
         ...document.querySelectorAll('[role="listitem"]'),
@@ -120,34 +92,77 @@ async function scrapePinterestBoard(boardUrl) {
   } catch (error) {
     console.error(`Failed scraping board ${boardUrl}:`, error);
     return [];
+  }
+}
+
+async function scrapeUserBoards(user) {
+  console.log(`\n🚀 Starting scrape for user: ${user.id}`);
+  
+  const browser = await chromium.launch({ 
+    headless: true,
+    args: [
+      '--no-sandbox',
+      '--disable-web-security',
+      '--disable-features=IsolateOrigins,site-per-process',
+    ]
+  });
+  
+  try {
+    const context = await browser.newContext({
+      viewport: { width: 1920, height: 1080 },
+      deviceScaleFactor: 2,
+      userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      ignoreHTTPSErrors: true,
+      permissions: ['geolocation'],
+      bypassCSP: true,
+    });
+    
+    const page = await context.newPage();
+
+    if (!await ensureLogin(page, user.pinterest_session)) {
+      throw new Error(`Login failed for user ${user.id}`);
+    }
+
+    // create user-specific data directory
+    const userDataDir = path.join(__dirname, '..', 'data', user.id);
+    await fs.mkdir(userDataDir, { recursive: true });
+
+    for (const feed of user.feeds) {
+      const pins = await scrapePinterestBoard(page, feed.boardUrl);
+      
+      if (pins.length > 0) {
+        const dataPath = path.join(userDataDir, `${feed.id}.json`);
+        await fs.writeFile(
+          dataPath,
+          JSON.stringify(pins, null, 2)
+        );
+        console.log(`✨ Saved ${pins.length} pins for ${user.id}/${feed.id}`);
+      } else {
+        console.error(`No pins found for ${user.id}/${feed.id}`);
+      }
+    }
+
+  } catch (error) {
+    console.error(`Failed processing user ${user.id}:`, error);
   } finally {
     await browser.close();
   }
 }
 
-async function scrapeAllBoards() {
-  console.log('Starting Pinterest scrape...');
-  // ensure both data and public folders exist
+async function scrapeAllUsers() {
+  console.log('🌟 Starting Pinterest scrape for all users...');
+  
+  // ensure data directory exists
   await fs.mkdir(path.join(__dirname, '..', 'data'), { recursive: true });
   
-  for (const feed of config.feeds) {
-    const pins = await scrapePinterestBoard(feed.boardUrl);
-    
-    if (pins.length > 0) {
-      const dataPath = path.join(__dirname, '..', 'data', `${feed.id}.json`);
-      await fs.writeFile(
-        dataPath,
-        JSON.stringify(pins, null, 2)
-      );
-      console.log(`✨ Saved ${pins.length} pins for ${feed.id}`);
-    } else {
-      console.error(`No pins found for ${feed.id}`);
-    }
+  // scrape sequentially to avoid rate limiting
+  for (const user of config.users) {
+    await scrapeUserBoards(user);
   }
   
-  console.log('Done scraping all boards!');
+  console.log('✅ Done scraping all users!');
 }
 
 // Clean up old debug screenshots if they exist
 fs.rm('./debug-screenshots', { recursive: true, force: true })
-  .then(() => scrapeAllBoards());
+  .then(() => scrapeAllUsers());

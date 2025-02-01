@@ -1,10 +1,28 @@
 {
-  "feeds": [
+  "users": [
     {
-      "id": "dseing",
-      "title": "garphec vibes",
-      "description": "auraphd dsingest suggestions",
-      "boardUrl": "https://www.pinterest.com/raiyanrahmanxx/fashion/"
+      "id": "user1",
+      "pinterest_session": "YOUR_SESSION_COOKIE_1",
+      "feeds": [
+        {
+          "id": "dseing",
+          "title": "garphec vibes",
+          "description": "auraphd dsingest suggestions",
+          "boardUrl": "https://www.pinterest.com/raiyanrahmanxx/fashion/"
+        }
+      ]
+    },
+    {
+      "id": "user2",
+      "pinterest_session": "YOUR_SESSION_COOKIE_2",
+      "feeds": [
+        {
+          "id": "inspo",
+          "title": "aesthetic board",
+          "description": "daily inspo",
+          "boardUrl": "https://www.pinterest.com/raiyanrahmanxx/fashion/"
+        }
+      ]
     }
   ]
 }
