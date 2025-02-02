@@ -137,7 +137,7 @@ async function scrapePinterestBoard(page, boardUrl) {
           image: imgSrc,
           url: link?.href,
           description: container.textContent?.trim() || '',
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toLocaleString('en-US', { timeZone: 'Asia/Dhaka' })
         };
       }).filter(Boolean);
     });

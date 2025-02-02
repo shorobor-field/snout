@@ -51,7 +51,7 @@ function makeErrorHtml(error) {
       <p>${message}</p>
       <p>Please check the configuration and try again.</p>
       <p style="color: #666; font-size: 0.9rem;">
-        Error occurred at: ${new Date(error.timestamp).toLocaleString()}
+        Error occurred at: ${new Date(error.timestamp).toLocaleString('en-US', { timeZone: 'Asia/Dhaka' })}
       </p>
     </div>
   `;
@@ -82,7 +82,9 @@ function makePinsHtml(pins, feedConfig) {
           
           const timeAgo = (() => {
             if (!pin.timestamp) return '';
-            const hours = Math.floor((Date.now() - new Date(pin.timestamp)) / (1000 * 60 * 60));
+            const now = new Date().toLocaleString('en-US', { timeZone: 'Asia/Dhaka' });
+            const pinTime = new Date(pin.timestamp);
+            const hours = Math.floor((new Date(now) - pinTime) / (1000 * 60 * 60));
             if (hours < 24) return `${hours}h ago`;
             const days = Math.floor(hours / 24);
             return `${days}d ago`;
@@ -123,8 +125,7 @@ function makePinsHtml(pins, feedConfig) {
       </div>
     </div>
   `;
-}
-async function generateFeed(userId, feedConfig) {
+  async function generateFeed(userId, feedConfig) {
   const { id, title, description, boardUrl } = feedConfig;
   
   try {
@@ -137,7 +138,7 @@ async function generateFeed(userId, feedConfig) {
       description: description || 'Pinterest Board Feed',
       feed_url: `https://shorobor-field.github.io/snout/feeds/${userId}/${id}.xml`,
       site_url: boardUrl,
-      pubDate: new Date(),
+      pubDate: new Date().toLocaleString('en-US', { timeZone: 'Asia/Dhaka' }),
       language: 'en',
       site_favicon: `https://shorobor-field.github.io/snout/images/favicon.ico`,
       image_url: `https://shorobor-field.github.io/snout/images/logo.png`,
@@ -153,15 +154,16 @@ async function generateFeed(userId, feedConfig) {
     // Check for errors
     if (parsed.error) {
       feed.item({
-        title: `🚨 Feed Update Failed - ${new Date().toLocaleDateString()}`,
+        title: `🚨 Feed Update Failed - ${new Date().toLocaleString('en-US', { timeZone: 'Asia/Dhaka' })}`,
         description: makeErrorHtml(parsed),
         url: boardUrl,
         guid: `error-${id}-${Date.now()}`,
-        date: new Date()
+        date: new Date().toLocaleString('en-US', { timeZone: 'Asia/Dhaka' })
       });
     } else {
       feed.item({
-        title: `${title} - ${new Date().toLocaleDateString('en-US', { 
+        title: `${title} - ${new Date().toLocaleString('en-US', { 
+          timeZone: 'Asia/Dhaka',
           weekday: 'long', 
           year: 'numeric', 
           month: 'long', 
@@ -170,7 +172,7 @@ async function generateFeed(userId, feedConfig) {
         description: makePinsHtml(parsed, feedConfig),
         url: boardUrl,
         guid: `${id}-${Date.now()}`,
-        date: new Date()
+        date: new Date().toLocaleString('en-US', { timeZone: 'Asia/Dhaka' })
       });
     }
 
@@ -190,7 +192,11 @@ async function generateFeed(userId, feedConfig) {
 async function shouldGenerateFeed(schedule) {
   if (!schedule || schedule.includes('daily')) return true;
 
-  const today = new Date().toLocaleString('en-us', { weekday: 'long' }).toLowerCase();
+  const today = new Date().toLocaleString('en-US', { 
+    timeZone: 'Asia/Dhaka',
+    weekday: 'long' 
+  }).toLowerCase();
+  
   return schedule.some(day => day.toLowerCase() === today);
 }
 
@@ -270,7 +276,11 @@ async function generateAllFeeds() {
 
     <div style="text-align: center; margin-top: 40px; color: #666;">
       <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
-      <p>Last updated: ${new Date().toLocaleString()}</p>
+      <p>Last updated: ${new Date().toLocaleString('en-US', {
+        timeZone: 'Asia/Dhaka',
+        dateStyle: 'medium',
+        timeStyle: 'medium'
+      })}</p>
       <p>🐕 woof!</p>
     </div>
   </div>
