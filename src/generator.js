@@ -125,7 +125,9 @@ function makePinsHtml(pins, feedConfig) {
       </div>
     </div>
   `;
-  async function generateFeed(userId, feedConfig) {
+}
+
+async function generateFeed(userId, feedConfig) {
   const { id, title, description, boardUrl } = feedConfig;
   
   try {
