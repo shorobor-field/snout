@@ -9,6 +9,15 @@ import config from '../config.json' assert { type: 'json' };
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+async function shouldRunToday(schedule) {
+  if (!schedule || schedule.includes('daily')) return true;
+  const today = new Date().toLocaleString('en-US', { 
+    timeZone: 'Asia/Dhaka',
+    weekday: 'long' 
+  }).toLowerCase();
+  return schedule.some(day => day.toLowerCase() === today);
+}
+
 async function getUserSession(userId) {
   const envVar = `PINTEREST_SESSION_${userId.toUpperCase()}`;
   const rawSessionValue = process.env[envVar];
@@ -16,18 +25,11 @@ async function getUserSession(userId) {
   if (!rawSessionValue) {
     throw new Error(`No Pinterest session found for user ${userId} (missing ${envVar})`);
   }
-  
   return rawSessionValue;
 }
 
 async function ensureLogin(page, sessionCookie) {
   try {
-    console.log('🔐 attempting pinterest login...');
-    
-    if (!sessionCookie || typeof sessionCookie !== 'string') {
-      throw new Error('Invalid session cookie format');
-    }
-
     await page.goto('https://pinterest.com', { timeout: 60000 });
     
     await page.context().addCookies([{
@@ -39,7 +41,6 @@ async function ensureLogin(page, sessionCookie) {
 
     await page.reload();
 
-    // Wait for either avatar or homefeed to confirm login
     const loginResult = await Promise.race([
       page.waitForSelector('[data-test-id="header-avatar"]', { timeout: 20000 })
         .then(() => true)
@@ -49,14 +50,8 @@ async function ensureLogin(page, sessionCookie) {
         .catch(() => false)
     ]);
 
-    if (!loginResult) {
-      throw new Error('Login selectors not found after reload');
-    }
-    
-    console.log('✅ login successful');
-    return true;
-  } catch (error) {
-    console.error('❌ login failed:', error.message);
+    return loginResult;
+  } catch {
     return false;
   }
 }
@@ -76,22 +71,17 @@ async function verifyImageUrl(page, url) {
 
 async function scrapePinterestBoard(page, boardUrl) {
   try {
-    console.log(`🔍 navigating to ${boardUrl}...`);
     await page.goto(boardUrl);
     await page.waitForTimeout(3000);
 
-    // Look for "More ideas" button
     const moreIdeasButton = await page.evaluate(() => {
-      // Try multiple button finding strategies
       const svgButton = document.querySelector('svg[aria-label="More ideas"]')?.closest('.Jea.jzS');
       if (svgButton) return true;
       
       const textButton = Array.from(document.querySelectorAll('.tBJ')).find(el => 
         el.textContent.trim() === 'More ideas'
       )?.closest('.Jea.jzS');
-      if (textButton) return true;
-      
-      return false;
+      return !!textButton;
     });
     
     if (moreIdeasButton) {
@@ -99,20 +89,13 @@ async function scrapePinterestBoard(page, boardUrl) {
         const button = document.querySelector('svg[aria-label="More ideas"]')?.closest('.Jea.jzS');
         if (button) button.click();
       });
-      
       await page.waitForTimeout(5000);
     }
 
-    // Wait for pins to load
     await page.waitForSelector('img', { timeout: 10000 });
-    
-    // Scroll to load more content
-    await page.evaluate(() => {
-      window.scrollBy(0, window.innerHeight * 2);
-    });
+    await page.evaluate(() => window.scrollBy(0, window.innerHeight * 2));
     await page.waitForTimeout(3000);
 
-    // Extract pins
     let pins = await page.evaluate(() => {
       const containers = [
         ...document.querySelectorAll('[data-test-id="pin"]'),
@@ -122,11 +105,9 @@ async function scrapePinterestBoard(page, boardUrl) {
       
       return containers.map(container => {
         if (!container) return null;
-
         const img = container.querySelector('img');
         const link = container.querySelector('a[href*="/pin/"]');
         
-        // Get highest quality image URL
         const imgSrc = img?.src
           ?.replace(/\/\d+x\//, '/originals/')
           ?.replace(/\?fit=.*$/, '');
@@ -142,9 +123,6 @@ async function scrapePinterestBoard(page, boardUrl) {
       }).filter(Boolean);
     });
 
-    console.log(`Found ${pins.length} potential pins, verifying images...`);
-
-    // Verify image URLs
     const verifiedPins = [];
     for (const pin of pins) {
       if (await verifyImageUrl(page, pin.image)) {
@@ -152,29 +130,20 @@ async function scrapePinterestBoard(page, boardUrl) {
       }
     }
 
-    console.log(`✅ verified ${verifiedPins.length} pins with valid images`);
     return verifiedPins;
-
   } catch (error) {
-    console.error(`Failed scraping board ${boardUrl}:`, error);
     return [];
   }
 }
 
-async function scrapeUserBoards(user) {
-  console.log(`\n🚀 starting scrape for user: ${user.id}`);
-  
+async function scrapeUserBoards(user, feedsToScrape = user.feeds) {
   const session = await getUserSession(user.id);
   const userDataDir = path.join(__dirname, '..', 'data', user.id);
   await fs.mkdir(userDataDir, { recursive: true });
   
   const browser = await chromium.launch({ 
     headless: true,
-    args: [
-      '--no-sandbox',
-      '--disable-web-security',
-      '--disable-features=IsolateOrigins,site-per-process'
-    ]
+    args: ['--no-sandbox', '--disable-web-security']
   });
   
   try {
@@ -182,21 +151,18 @@ async function scrapeUserBoards(user) {
       viewport: { width: 1920, height: 1080 },
       deviceScaleFactor: 2,
       userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      ignoreHTTPSErrors: true,
-      permissions: ['geolocation'],
-      bypassCSP: true
+      ignoreHTTPSErrors: true
     });
     
     const page = await context.newPage();
 
     const loginSuccess = await ensureLogin(page, session);
     if (!loginSuccess) {
-      // Write auth error files for each feed
-      for (const feed of user.feeds) {
+      for (const feed of feedsToScrape) {
         const errorData = {
           error: 'AUTH_ERROR',
           message: 'Pinterest session expired or invalid',
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toLocaleString('en-US', { timeZone: 'Asia/Dhaka' })
         };
         
         await fs.writeFile(
@@ -207,58 +173,63 @@ async function scrapeUserBoards(user) {
       throw new Error(`Login failed for user ${user.id}`);
     }
 
-    for (const feed of user.feeds) {
+    for (const feed of feedsToScrape) {
       const pins = await scrapePinterestBoard(page, feed.boardUrl);
       
       if (pins.length > 0) {
-        const dataPath = path.join(userDataDir, `${feed.id}.json`);
         await fs.writeFile(
-          dataPath,
+          path.join(userDataDir, `${feed.id}.json`),
           JSON.stringify(pins, null, 2)
         );
-        console.log(`✨ saved ${pins.length} pins for ${user.id}/${feed.id}`);
+        console.log(`✨ ${user.id}/${feed.id}: saved ${pins.length} pins`);
       } else {
-        console.error(`No pins found for ${user.id}/${feed.id}`);
-        
-        // Write scraping error
         const errorData = {
           error: 'SCRAPE_ERROR',
           message: 'No pins could be extracted from board',
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toLocaleString('en-US', { timeZone: 'Asia/Dhaka' })
         };
         
         await fs.writeFile(
           path.join(userDataDir, `${feed.id}.json`),
           JSON.stringify(errorData, null, 2)
         );
+        console.log(`❌ ${user.id}/${feed.id}: no pins found`);
       }
     }
 
   } catch (error) {
-    console.error(`Failed processing user ${user.id}:`, error);
+    console.log(`❌ ${user.id}: ${error.message}`);
   } finally {
     await browser.close();
   }
 }
 
 async function scrapeAllUsers() {
-  console.log('🌟 starting pinterest scrape for all users...');
+  console.log('🌟 starting pinterest scrape...');
   
-  // Ensure data directory exists
   await fs.mkdir(path.join(__dirname, '..', 'data'), { recursive: true });
   
-  // Scrape sequentially to avoid rate limiting
   for (const user of config.users) {
-    await scrapeUserBoards(user);
+    const feedsToRun = [];
+    
+    for (const feed of user.feeds) {
+      if (await shouldRunToday(feed.schedule)) {
+        feedsToRun.push(feed);
+      }
+    }
+    
+    if (feedsToRun.length > 0) {
+      console.log(`📡 ${user.id}: scraping ${feedsToRun.length} feeds...`);
+      await scrapeUserBoards(user, feedsToRun);
+    }
   }
   
   console.log('✅ scraping complete!');
 }
 
-// Clean up old debug screenshots if they exist
 fs.rm('./debug-screenshots', { recursive: true, force: true })
   .then(() => scrapeAllUsers())
   .catch(error => {
-    console.error('Error during scraping process:', error);
+    console.log('❌ fatal error:', error.message);
     process.exit(1);
   });

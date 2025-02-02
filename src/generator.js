@@ -9,28 +9,16 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const configPath = path.join(__dirname, '..', 'config.json');
-
-// Read config
 const config = JSON.parse(readFileSync(configPath, 'utf8'));
 
 function cleanContent(pin) {
   let title = pin.title;
   let desc = pin.description?.trim() || null;
+  const REF_LENGTH = 120;
   
-  const REF_LENGTH = 120; // max title/desc length
-  
-  if (title?.startsWith('This may contain:')) {
-    title = null;
-  }
-  
-  if (title && title.length > REF_LENGTH) {
-    title = title.slice(0, REF_LENGTH) + '...';
-  }
-  
-  if (desc && desc.length > REF_LENGTH * 2) {
-    desc = desc.slice(0, REF_LENGTH * 2) + '...';
-  }
-  
+  if (title?.startsWith('This may contain:')) title = null;
+  if (title?.length > REF_LENGTH) title = title.slice(0, REF_LENGTH) + '...';
+  if (desc?.length > REF_LENGTH * 2) desc = desc.slice(0, REF_LENGTH * 2) + '...';
   desc = desc?.replace(/::view-transition[^}]+}/g, '').trim() || null;
   
   return { title, desc };
@@ -43,12 +31,10 @@ function makeErrorHtml(error) {
     UNKNOWN_ERROR: 'An unknown error occurred while updating the feed.'
   };
 
-  const message = messages[error.error] || messages.UNKNOWN_ERROR;
-
   return `
     <div style="padding: 2rem; text-align: center; font-family: system-ui;">
       <h2 style="color: #e11d48;">🚨 Feed Update Failed</h2>
-      <p>${message}</p>
+      <p>${messages[error.error] || messages.UNKNOWN_ERROR}</p>
       <p>Please check the configuration and try again.</p>
       <p style="color: #666; font-size: 0.9rem;">
         Error occurred at: ${new Date(error.timestamp).toLocaleString('en-US', { timeZone: 'Asia/Dhaka' })}
@@ -60,10 +46,9 @@ function makeErrorHtml(error) {
 function makePinsHtml(pins, feedConfig) {
   return `
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300&display=swap" rel="stylesheet">
-
     <div style="max-width: 800px; margin: 0 auto; padding: 20px; font-family: Georgia, serif;">
       <div style="text-align: center; margin-bottom: 40px;">
-        <h1 style="font-family: 'Cormorant Garamond', Georgia, serif; font-size: 3em; color: #1a1a1a; margin: 0; font-weight: 300;">
+        <h1 style="font-family: 'Cormorant Garamond', serif; font-size: 3em; color: #1a1a1a; margin: 0; font-weight: 300;">
           ${feedConfig.title}
         </h1>
         ${feedConfig.description ? 
@@ -72,22 +57,17 @@ function makePinsHtml(pins, feedConfig) {
         }
       </div>
 
-      <div style="text-align: center; margin: 30px 0;">
-        <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
-      </div>
+      <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
 
       <div style="display: flex; flex-wrap: wrap; gap: 20px; justify-content: center;">
         ${pins.map(pin => {
           const { title, desc } = cleanContent(pin);
-          
           const timeAgo = (() => {
             if (!pin.timestamp) return '';
             const now = new Date().toLocaleString('en-US', { timeZone: 'Asia/Dhaka' });
             const pinTime = new Date(pin.timestamp);
             const hours = Math.floor((new Date(now) - pinTime) / (1000 * 60 * 60));
-            if (hours < 24) return `${hours}h ago`;
-            const days = Math.floor(hours / 24);
-            return `${days}d ago`;
+            return hours < 24 ? `${hours}h ago` : `${Math.floor(hours / 24)}d ago`;
           })();
 
           return `
@@ -96,22 +76,11 @@ function makePinsHtml(pins, feedConfig) {
                    style="width: 100%; object-fit: contain; max-height: 600px; background: #f0f0f0;"
                    onerror="this.style.display='none'">
               <div style="padding: 16px;">
-                ${title ? 
-                  `<h3 style="margin: 0 0 8px 0; font-size: 18px; color: #1a1a1a;">${title}</h3>` 
-                  : ''
-                }
-                ${desc ? 
-                  `<p style="margin: 0 0 12px 0; color: #666; font-size: 14px;">${desc}</p>` 
-                  : ''
-                }
+                ${title ? `<h3 style="margin: 0 0 8px 0; font-size: 18px; color: #1a1a1a;">${title}</h3>` : ''}
+                ${desc ? `<p style="margin: 0 0 12px 0; color: #666; font-size: 14px;">${desc}</p>` : ''}
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                  <a href="${pin.url}" style="color: #666; text-decoration: none; font-size: 14px;">
-                    Open ↗
-                  </a>
-                  ${timeAgo ? 
-                    `<span style="color: #999; font-size: 12px;">${timeAgo}</span>`
-                    : ''
-                  }
+                  <a href="${pin.url}" style="color: #666; text-decoration: none; font-size: 14px;">Open ↗</a>
+                  ${timeAgo ? `<span style="color: #999; font-size: 12px;">${timeAgo}</span>` : ''}
                 </div>
               </div>
             </div>
@@ -119,10 +88,8 @@ function makePinsHtml(pins, feedConfig) {
         }).join('')}
       </div>
 
-      <div style="text-align: center; margin-top: 40px; color: #666;">
-        <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
-        <p>🐕 woof woof!</p>
-      </div>
+      <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
+      <p style="text-align: center; color: #666;">🐕 woof woof!</p>
     </div>
   `;
 }
@@ -142,18 +109,18 @@ async function generateFeed(userId, feedConfig) {
       site_url: boardUrl,
       pubDate: new Date().toLocaleString('en-US', { timeZone: 'Asia/Dhaka' }),
       language: 'en',
-      site_favicon: `https://shorobor-field.github.io/snout/images/favicon.ico`,
       image_url: `https://shorobor-field.github.io/snout/images/logo.png`,
       custom_namespaces: {
-        'webfeeds': 'http://webfeeds.org/rss/1.0'
+        'webfeeds': 'http://webfeeds.org/rss/1.0',
+        'atom': 'http://www.w3.org/2005/Atom'
       },
       custom_elements: [
         {'webfeeds:icon': `https://shorobor-field.github.io/snout/images/favicon.ico`},
-        {'webfeeds:logo': `https://shorobor-field.github.io/snout/images/logo.png`}
+        {'webfeeds:logo': `https://shorobor-field.github.io/snout/images/logo.png`},
+        {'atom:icon': `https://shorobor-field.github.io/snout/images/favicon.ico`}
       ]
     });
 
-    // Check for errors
     if (parsed.error) {
       feed.item({
         title: `🚨 Feed Update Failed - ${new Date().toLocaleString('en-US', { timeZone: 'Asia/Dhaka' })}`,
@@ -182,41 +149,22 @@ async function generateFeed(userId, feedConfig) {
     const userFeedsPath = path.join(publicPath, 'feeds', userId);
     await fs.mkdir(userFeedsPath, { recursive: true });
     
-    const feedPath = path.join(userFeedsPath, `${id}.xml`);
-    await fs.writeFile(feedPath, feed.xml({indent: true}));
-    console.log(`✨ generated feed at: ${feedPath}`);
+    await fs.writeFile(path.join(userFeedsPath, `${id}.xml`), feed.xml({indent: true}));
+    console.log(`✨ generated ${userId}/${id}`);
 
   } catch (error) {
-    console.error(`💀 failed generating ${userId}/${id}:`, error);
+    console.log(`❌ ${userId}/${id}: ${error.message}`);
   }
 }
-
-async function shouldGenerateFeed(schedule) {
-  if (!schedule || schedule.includes('daily')) return true;
-
-  const today = new Date().toLocaleString('en-US', { 
-    timeZone: 'Asia/Dhaka',
-    weekday: 'long' 
-  }).toLowerCase();
-  
-  return schedule.some(day => day.toLowerCase() === today);
-}
-
 async function generateUserFeeds(user) {
-  console.log(`\n📡 generating feeds for user ${user.id}...`);
-  
+  console.log(`📡 ${user.id}: generating feeds...`);
   for (const feed of user.feeds) {
-    if (await shouldGenerateFeed(feed.schedule)) {
-      console.log(`generating ${feed.id} (scheduled for ${feed.schedule?.join(', ')})`);
-      await generateFeed(user.id, feed);
-    } else {
-      console.log(`skipping ${feed.id} (not scheduled for today)`);
-    }
+    await generateFeed(user.id, feed);
   }
 }
 
 async function generateAllFeeds() {
-  console.log('🌟 generating all feeds...');
+  console.log('🌟 starting feed generation...');
   
   for (const user of config.users) {
     await generateUserFeeds(user);
@@ -228,18 +176,19 @@ async function generateAllFeeds() {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>snout 🐕</title>
+  <title>snout</title>
   <link rel="icon" type="image/x-icon" href="/images/favicon.ico">
   <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png">
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300&display=swap" rel="stylesheet">
 </head>
-<body style="margin: 0; padding: 20px; font-family: Georgia, serif; background: #f8f8f8;">
+<body style="margin: 0; padding: 20px; font-family: system-ui, sans-serif; background: #f8f8f8;">
   <div style="max-width: 800px; margin: 0 auto;">
     <div style="text-align: center; margin-bottom: 40px;">
-      <h1 style="font-family: 'Cormorant Garamond', Georgia, serif; font-size: 3em; color: #1a1a1a; margin: 0; font-weight: 300;">
-        🐕 snout
+      <img src="/images/logo.png" alt="Snout" style="width: 64px; height: 64px; margin-bottom: 12px;">
+      <h1 style="font-family: 'Work Sans', serif; font-size: 3em; color: #1a1a1a; margin: 0; font-weight: 300;">
+        snout
       </h1>
       <h2 style="font-weight: normal; color: #666; margin: 10px 0;">Pinterest RSS feeds</h2>
     </div>
@@ -283,7 +232,6 @@ async function generateAllFeeds() {
         dateStyle: 'medium',
         timeStyle: 'medium'
       })}</p>
-      <p>🐕 woof!</p>
     </div>
   </div>
 </body>
@@ -293,7 +241,7 @@ async function generateAllFeeds() {
   await fs.mkdir(publicPath, { recursive: true });
   await fs.writeFile(path.join(publicPath, 'index.html'), indexHtml);
   
-  console.log('✨ all feeds generated!');
+  console.log('✅ feed generation complete!');
 }
 
 generateAllFeeds();
