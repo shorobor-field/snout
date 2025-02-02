@@ -162,7 +162,7 @@ async function generateAllFeeds() {
     await generateUserFeeds(user);
   }
   
-  // Create landing page
+// Create landing page
   const indexHtml = `<!DOCTYPE html>
 <html>
 <head>
@@ -173,16 +173,16 @@ async function generateAllFeeds() {
   <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png">
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300&display=swap" rel="stylesheet">
 </head>
-<body style="margin: 0; padding: 20px; font-family: system-ui, sans-serif; background: #f8f8f8;">
+<body style="margin: 0; padding: 20px; font-family: system-ui, -apple-system, sans-serif; background: #f8f8f8;">
   <div style="max-width: 800px; margin: 0 auto;">
     <div style="text-align: center; margin-bottom: 40px;">
-      <img src="/images/logo.png" alt="Snout" style="width: 64px; height: 64px; margin-bottom: 12px;">
-      <h1 style="font-family: 'Work Sans', serif; font-size: 3em; color: #1a1a1a; margin: 0; font-weight: 300;">
-        snout
-      </h1>
-      <h2 style="font-weight: normal; color: #666; margin: 10px 0;">Pinterest RSS feeds</h2>
+      <div style="display: flex; align-items: center; justify-content: center; gap: 16px;">
+        <img src="/images/logo.png" alt="Snout" style="width: 48px; height: 48px;">
+        <h1 style="font-size: 3em; color: #1a1a1a; margin: 0; font-weight: 300;">
+          snout
+        </h1>
+      </div>
     </div>
 
     ${config.users.map(user => `
