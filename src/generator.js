@@ -62,13 +62,6 @@ function makePinsHtml(pins, feedConfig) {
       <div style="display: flex; flex-wrap: wrap; gap: 20px; justify-content: center;">
         ${pins.map(pin => {
           const { title, desc } = cleanContent(pin);
-          const timeAgo = (() => {
-            if (!pin.timestamp) return '';
-            const now = new Date().toLocaleString('en-US', { timeZone: 'Asia/Dhaka' });
-            const pinTime = new Date(pin.timestamp);
-            const hours = Math.floor((new Date(now) - pinTime) / (1000 * 60 * 60));
-            return hours < 24 ? `${hours}h ago` : `${Math.floor(hours / 24)}d ago`;
-          })();
 
           return `
             <div style="flex: 1 1 300px; max-width: 400px; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
@@ -78,9 +71,8 @@ function makePinsHtml(pins, feedConfig) {
               <div style="padding: 16px;">
                 ${title ? `<h3 style="margin: 0 0 8px 0; font-size: 18px; color: #1a1a1a;">${title}</h3>` : ''}
                 ${desc ? `<p style="margin: 0 0 12px 0; color: #666; font-size: 14px;">${desc}</p>` : ''}
-                <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="text-align: left;">
                   <a href="${pin.url}" style="color: #666; text-decoration: none; font-size: 14px;">Open ↗</a>
-                  ${timeAgo ? `<span style="color: #999; font-size: 12px;">${timeAgo}</span>` : ''}
                 </div>
               </div>
             </div>
