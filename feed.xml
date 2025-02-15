@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?><rss xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
+    <channel>
+        <title><![CDATA[pinterest vibes]]></title>
+        <description><![CDATA[auto-curated pinterest suggestions]]></description>
+        <link>https://pinterest.com</link>
+        <generator>RSS for Node</generator>
+        <lastBuildDate>Fri, 31 Jan 2025 15:38:27 GMT</lastBuildDate>
+        <atom:link href="https://shorobor-field.github.io/snout/feed.xml" rel="self" type="application/rss+xml"/>
+        <item>
+            <title><![CDATA[Untitled Pin]]></title>
+            <description><![CDATA[
+          <div style="padding: 1rem;">
+            <img src="https://i.pinimg.com/236x/9b/2d/c8/9b2dc8146b68613366c954e4724efec5.jpg" style="width: 100%; border-radius: 8px;">
+            
+          </div>
+        ]]></description>
+            <link>https://www.pinterest.com/pin/422916221273750110/</link>
+            <guid isPermaLink="false">1738337818844</guid>
+            <pubDate>Fri, 31 Jan 2025 15:38:27 GMT</pubDate>
+        </item>
+        <item>
+            <title><![CDATA[Untitled Pin]]></title>
+            <description><![CDATA[
+          <div style="padding: 1rem;">
+            <img src="https://i.pinimg.com/236x/dc/b2/92/dcb2924498fcaa94c6c7e23a1feaea94.jpg" style="width: 100%; border-radius: 8px;">
+            
+          </div>
+        ]]></description>
+            <link>https://www.pinterest.com/pin/348606827379547198/</link>
+            <guid isPermaLink="false">1738337818844</guid>
+            <pubDate>Fri, 31 Jan 2025 15:38:27 GMT</pubDate>
+        </item>
+        <item>
+            <title><![CDATA[Untitled Pin]]></title>
+            <description><![CDATA[
+          <div style="padding: 1rem;">
+            <img src="https://i.pinimg.com/236x/d8/18/ef/d818ef693d2a6dd7ba71545c27ca7f78.jpg" style="width: 100%; border-radius: 8px;">
+            
+          </div>
+        ]]></description>
+            <link>https://www.pinterest.com/pin/308215168268238328/</link>
+            <guid isPermaLink="false">1738337818844</guid>
+            <pubDate>Fri, 31 Jan 2025 15:38:27 GMT</pubDate>
+        </item>
+        <item>
+            <title><![CDATA[Untitled Pin]]></title>
+            <description><![CDATA[
+          <div style="padding: 1rem;">
+            <img src="https://i.pinimg.com/236x/26/78/44/2678442de61932a2be46b325d54fa547.jpg" style="width: 100%; border-radius: 8px;">
+            
+          </div>
+        ]]></description>
+            <link>https://www.pinterest.com/pin/20477373299828415/</link>
+            <guid isPermaLink="false">1738337818844</guid>
+            <pubDate>Fri, 31 Jan 2025 15:38:27 GMT</pubDate>
+        </item>
+    </channel>
+</rss>
